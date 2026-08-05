@@ -1,4 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "prisma/seed.ts"]
+  "//": "prisma/ é excluído inteiro: seed e biblioteca rodam via ts-node, não pelo nest build. Incluí-los desloca o rootDir e joga o main.js para dist/src/.",
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "prisma"]
 }

@@ -31,6 +31,6 @@ COPY --from=builder /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 3333
 
-# Boot resiliente: migrate e seed são best-effort e NUNCA impedem o start da API
-# (as migrações já aplicadas garantem o schema). Erros vão para o log.
-CMD ["sh", "-c", "(npx prisma migrate deploy || echo '[boot] migrate deploy falhou, seguindo'); (npx ts-node --transpile-only prisma/seed.ts || echo '[boot] seed falhou, seguindo'); node dist/main.js"]
+# Migrate bloqueia (falha de migração deve barrar o boot); o seed é best-effort
+# (nunca derruba a API). ts-node --transpile-only para ser leve no boot.
+CMD ["sh", "-c", "npx prisma migrate deploy && (npx ts-node --transpile-only prisma/seed.ts || echo '[boot] seed falhou, seguindo') && node dist/main.js"]
