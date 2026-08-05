@@ -19,6 +19,15 @@ export const envSchema = z.object({
   SUPER_ADMIN_EMAIL: z.string().email().optional(),
   SUPER_ADMIN_PASSWORD: z.string().min(8).optional(),
   SUPER_ADMIN_NAME: z.string().optional(),
+
+  // Criptografia AES-256-GCM das credenciais SMTP em repouso.
+  // Aceita chave em hex (64 chars) ou base64 (44 chars) equivalente a 32 bytes.
+  ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY deve ter 32 bytes (hex ou base64)'),
+
+  // Agendador de envio (outbox). Intervalo de varredura e tentativas máximas.
+  MAIL_SCHEDULER_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
+  MAIL_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  MAIL_BATCH_SIZE: z.coerce.number().int().positive().default(25),
 });
 
 export type Env = z.infer<typeof envSchema>;

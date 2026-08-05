@@ -36,6 +36,8 @@ model Company {
 
   users          User[]
   authorizations AuthorizationConsent[]
+  sendingDomains SendingDomain[]
+  emailOutbox    EmailOutbox[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,6 +81,102 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// ─── Domínios de envio (transporte SMTP plugável) ─────────────
+enum DomainStatus {
+  PENDING // criado, ainda não testado
+  VERIFIED // conexão SMTP testada com sucesso
+  FAILED // teste de conexão falhou
+}
+
+// Um domínio a partir do qual disparamos (ex.: dominiolegal.com.br, pagueagora.com.br).
+// companyId nulo = domínio da plataforma (pool compartilhado); preenchido = domínio da empresa.
+model SendingDomain {
+  id        String       @id @default(uuid())
+  domain    String // ex.: dominiolegal.com.br
+  status    DomainStatus @default(PENDING)
+
+  // Configuração SMTP (senha criptografada em repouso — AES-256-GCM)
+  smtpHost         String
+  smtpPort         Int     @default(587)
+  smtpSecure       Boolean @default(false) // true = TLS implícito (465)
+  smtpUsername     String
+  smtpPasswordEnc  String // ciphertext (nunca em claro)
+
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?
+
+  identities SenderIdentity[]
+  lastTestedAt DateTime?
+  lastTestError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([domain, companyId])
+  @@index([companyId])
+  @@map("sending_domains")
+}
+
+// Identidade de remetente dentro de um domínio (ex.: contas@, fabrica@, juridico@).
+model SenderIdentity {
+  id        String        @id @default(uuid())
+  domain    SendingDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  domainId  String
+  localPart String // "contas" -> contas@dominiolegal.com.br
+  displayName String // "Financeiro Domínio Legal"
+  isActive  Boolean @default(true)
+
+  outbox    EmailOutbox[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([domainId, localPart])
+  @@index([domainId])
+  @@map("sender_identities")
+}
+
+// ─── Outbox de e-mail (fila de envio no Postgres, sem Redis) ──
+enum OutboxStatus {
+  PENDING // aguardando o horário de envio (gota-a-gota)
+  SENDING // sendo processado
+  SENT // entregue ao SMTP com sucesso
+  FAILED // esgotou tentativas
+  CANCELED // cancelado antes do envio
+}
+
+model EmailOutbox {
+  id String @id @default(uuid())
+
+  senderIdentity   SenderIdentity @relation(fields: [senderIdentityId], references: [id], onDelete: Restrict)
+  senderIdentityId String
+
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?
+
+  toEmail String
+  toName  String?
+  subject String
+  html    String
+  text    String?
+
+  scheduledAt DateTime // quando enviar (gota-a-gota com jitter)
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  sentAt      DateTime?
+  providerMessageId String?
+
+  // Ligação com campanha entra na Sprint 2 (tracking por token).
+  campaignId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledAt])
+  @@index([companyId])
+  @@map("email_outbox")
 }
 
 // ─── Autorização / consentimento (trilho legal LGPD) ──────────

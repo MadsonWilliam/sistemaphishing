@@ -82,11 +82,22 @@ docker compose up --build
 | POST | `/api/companies` | SUPER_ADMIN |
 | GET  | `/api/companies` | SUPER_ADMIN |
 | GET  | `/api/companies/:id` | dono da empresa ou SUPER_ADMIN |
+| POST | `/api/sending-domains` | SUPER_ADMIN |
+| GET  | `/api/sending-domains` | SUPER_ADMIN |
+| POST | `/api/sending-domains/:id/verify` | SUPER_ADMIN |
+| POST | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
+| GET  | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
+| POST | `/api/sending-domains/:id/test` | SUPER_ADMIN |
+| POST | `/api/outbox/drip-test` | SUPER_ADMIN |
+| GET  | `/api/outbox` | SUPER_ADMIN |
+| GET  | `/api/outbox/stats` | SUPER_ADMIN |
 
 ## Roadmap
 
-- **Sprint 0 (atual):** fundação — auth, RBAC, tenants, health, Docker ✅
-- **Sprint 1:** domínios de e-mail + envio SMTP + fila
+- **Sprint 0:** fundação — auth, RBAC, tenants, health, Docker ✅
+- **Sprint 1 (atual):** domínios de e-mail (SMTP plugável por domínio, credenciais
+  cifradas AES-256-GCM), identidades de remetente, outbox no Postgres com
+  agendador gota-a-gota (jitter + retry/backoff), sem Redis ✅
 - **Sprint 2:** tokens únicos, tracking, landing educativa configurável
 - **Sprint 3:** editor de e-mail + biblioteca de templates por setor
 - **Sprint 4:** dashboard interativa (cross-filter, tempo real)

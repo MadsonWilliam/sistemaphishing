@@ -3,8 +3,12 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
+import { CryptoModule } from './common/crypto/crypto.module';
+import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
+import { DomainsModule } from './domains/domains.module';
+import { OutboxModule } from './outbox/outbox.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -16,8 +20,12 @@ import { RolesGuard } from './common/guards/roles.guard';
       validate: validateEnv,
     }),
     PrismaModule,
+    CryptoModule,
+    MailModule,
     AuthModule,
     CompaniesModule,
+    DomainsModule,
+    OutboxModule,
     HealthModule,
   ],
   providers: [
