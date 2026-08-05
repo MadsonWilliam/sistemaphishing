@@ -3,7 +3,9 @@
 // Modelos de campanha/tracking entram na Sprint 1.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" p/ dev local; musl-openssl-3.0 p/ o container Alpine (node:20-alpine).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

@@ -2,29 +2,33 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Instala dependências usando o lockfile do monorepo
-COPY package.json package-lock.json* ./
-COPY apps/api/package.json ./apps/api/
-RUN npm install --workspace @phish/api --include-workspace-root
+# Prisma no Alpine (musl) precisa do OpenSSL para detectar/rodar o query engine.
+RUN apk add --no-cache openssl
 
-# Copia o código e gera o Prisma Client + build
-COPY apps/api ./apps/api
-WORKDIR /app/apps/api
-RUN npx prisma generate
-RUN npm run build
+# Instala TODAS as dependências do monorepo (workspaces) — install simples e robusto.
+COPY package.json package-lock.json* ./
+COPY apps/api/package.json ./apps/api/package.json
+RUN npm install
+
+# Copia o restante do código (node_modules/dist ficam de fora via .dockerignore)
+COPY . .
+
+# Gera o Prisma Client e compila a API
+RUN npm run api:prisma:generate
+RUN npm run api:build
 
 # ─── Runtime stage ────────────────────────────────────────────
 FROM node:20-alpine AS runner
-WORKDIR /app/apps/api
+WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 
-# Copia node_modules já resolvidos e artefatos de build
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/apps/api/node_modules ./node_modules
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/prisma ./prisma
-COPY --from=builder /app/apps/api/package.json ./package.json
+# Copia dependências resolvidas + artefatos de build
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/apps/api ./apps/api
 
+WORKDIR /app/apps/api
 EXPOSE 3333
 
 # Aplica migrações, garante o super admin (idempotente) e sobe a API
