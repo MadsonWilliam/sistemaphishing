@@ -27,5 +27,5 @@ COPY --from=builder /app/apps/api/package.json ./package.json
 
 EXPOSE 3333
 
-# Aplica migrações pendentes e sobe a API
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Aplica migrações, garante o super admin (idempotente) e sobe a API
+CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/seed.ts && node dist/main.js"]
