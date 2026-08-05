@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { existsSync } from 'fs';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { CryptoModule } from './common/crypto/crypto.module';
@@ -23,6 +26,16 @@ import { RolesGuard } from './common/guards/roles.guard';
       isGlobal: true,
       validate: validateEnv,
     }),
+    // Serve o SPA (React) na mesma origem, exceto /api e /t (controllers).
+    // Só registra se o build do front existir (em dev usamos o Vite separado).
+    ...(existsSync(join(__dirname, '..', '..', 'web', 'dist'))
+      ? [
+          ServeStaticModule.forRoot({
+            rootPath: join(__dirname, '..', '..', 'web', 'dist'),
+            exclude: ['/api', '/api/(.*)', '/t', '/t/(.*)'],
+          }),
+        ]
+      : []),
     PrismaModule,
     CryptoModule,
     MailModule,
