@@ -7,9 +7,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { DomainsService } from './domains.service';
+import { DeliverabilityService } from './deliverability.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
   CreateSendingDomainDto,
@@ -22,7 +24,10 @@ import {
 @Roles(Role.SUPER_ADMIN)
 @Controller('sending-domains')
 export class DomainsController {
-  constructor(private readonly domains: DomainsService) {}
+  constructor(
+    private readonly domains: DomainsService,
+    private readonly deliverability: DeliverabilityService,
+  ) {}
 
   @Post()
   create(@Body() dto: CreateSendingDomainDto) {
@@ -56,6 +61,16 @@ export class DomainsController {
   @HttpCode(200)
   verify(@Param('id') id: string) {
     return this.domains.verify(id);
+  }
+
+  // Saúde de entregabilidade: checa SPF/DKIM/DMARC no DNS do domínio.
+  @Get(':id/deliverability')
+  async deliverabilityCheck(
+    @Param('id') id: string,
+    @Query('selector') selector?: string,
+  ) {
+    const domain = await this.domains.findOneOrThrow(id);
+    return this.deliverability.check(domain.domain, selector);
   }
 
   @Post(':id/identities')

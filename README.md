@@ -88,6 +88,7 @@ docker compose up --build
 | DELETE | `/api/sending-domains/:id` | SUPER_ADMIN |
 | DELETE | `/api/sending-domains/:id/identities/:identityId` | SUPER_ADMIN |
 | POST | `/api/sending-domains/:id/verify` | SUPER_ADMIN |
+| GET  | `/api/sending-domains/:id/deliverability` | SUPER_ADMIN (SPF/DKIM/DMARC) |
 | POST | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
 | GET  | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
 | POST | `/api/sending-domains/:id/test` | SUPER_ADMIN |
