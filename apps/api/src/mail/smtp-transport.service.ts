@@ -28,6 +28,10 @@ export class SmtpTransportService {
         pool: true,
         maxConnections: 3,
         maxMessages: 100,
+        // Falha rápido em porta/host ruim em vez de pendurar a requisição.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
       });
       this.pool.set(key, t);
     }

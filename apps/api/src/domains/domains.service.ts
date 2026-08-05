@@ -13,6 +13,7 @@ import {
   CreateSendingDomainDto,
   CreateSenderIdentityDto,
   SendTestEmailDto,
+  UpdateSendingDomainDto,
 } from './dto/domain.dto';
 
 @Injectable()
@@ -148,6 +149,65 @@ export class DomainsService {
       const message = err instanceof Error ? err.message : 'Falha desconhecida';
       throw new BadRequestException(`Falha no envio de teste: ${message}`);
     }
+  }
+
+  // Atualiza a config SMTP do domínio (reencripta a senha só se enviada) e
+  // invalida o transporter em cache. Config alterada volta ao status PENDING.
+  async update(id: string, dto: UpdateSendingDomainDto) {
+    const existing = await this.findOneOrThrow(id);
+    // Descarta o transporter em cache da configuração anterior.
+    this.smtp.evict(this.smtpConfigOf(existing));
+
+    const updated = await this.prisma.sendingDomain.update({
+      where: { id },
+      data: {
+        smtpHost: dto.smtpHost?.trim() ?? undefined,
+        smtpPort: dto.smtpPort ?? undefined,
+        smtpSecure: dto.smtpSecure ?? undefined,
+        smtpUsername: dto.smtpUsername?.trim() ?? undefined,
+        smtpPasswordEnc: dto.smtpPassword
+          ? this.crypto.encrypt(dto.smtpPassword)
+          : undefined,
+        status: DomainStatus.PENDING,
+        lastTestError: null,
+      },
+    });
+    return this.toPublic(updated);
+  }
+
+  // Remove o domínio, suas identidades e a fila associada (transação).
+  async remove(id: string) {
+    const domain = await this.findOneOrThrow(id);
+    const identities = await this.prisma.senderIdentity.findMany({
+      where: { domainId: id },
+      select: { id: true },
+    });
+    const identityIds = identities.map((i) => i.id);
+    await this.prisma.$transaction([
+      this.prisma.emailOutbox.deleteMany({
+        where: { senderIdentityId: { in: identityIds } },
+      }),
+      // Cascade remove as identidades; então o domínio.
+      this.prisma.sendingDomain.delete({ where: { id } }),
+    ]);
+    this.smtp.evict(this.smtpConfigOf(domain));
+    return { deleted: true };
+  }
+
+  async removeIdentity(domainId: string, identityId: string) {
+    const identity = await this.prisma.senderIdentity.findFirst({
+      where: { id: identityId, domainId },
+    });
+    if (!identity) {
+      throw new NotFoundException('Identidade não encontrada neste domínio.');
+    }
+    await this.prisma.$transaction([
+      this.prisma.emailOutbox.deleteMany({
+        where: { senderIdentityId: identityId },
+      }),
+      this.prisma.senderIdentity.delete({ where: { id: identityId } }),
+    ]);
+    return { deleted: true };
   }
 
   // Nunca expõe a senha (nem cifrada) na resposta da API.

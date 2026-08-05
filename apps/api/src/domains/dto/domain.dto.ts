@@ -43,6 +43,34 @@ export class CreateSendingDomainDto {
   companyId?: string;
 }
 
+export class UpdateSendingDomainDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  smtpHost?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  smtpPort?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  smtpSecure?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  smtpUsername?: string;
+
+  // Só reencripta se enviada.
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  smtpPassword?: string;
+}
+
 export class CreateSenderIdentityDto {
   // parte local do e-mail, ex.: "contas" -> contas@dominiolegal.com.br
   @Matches(/^[A-Za-z0-9._%+-]+$/, { message: 'Parte local inválida.' })

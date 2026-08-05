@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -13,6 +15,7 @@ import {
   CreateSendingDomainDto,
   CreateSenderIdentityDto,
   SendTestEmailDto,
+  UpdateSendingDomainDto,
 } from './dto/domain.dto';
 
 // Gestão dos domínios de envio é da plataforma (SUPER_ADMIN) neste estágio.
@@ -29,6 +32,24 @@ export class DomainsController {
   @Get()
   findAll() {
     return this.domains.findAll();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateSendingDomainDto) {
+    return this.domains.update(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.domains.remove(id);
+  }
+
+  @Delete(':id/identities/:identityId')
+  removeIdentity(
+    @Param('id') id: string,
+    @Param('identityId') identityId: string,
+  ) {
+    return this.domains.removeIdentity(id, identityId);
   }
 
   @Post(':id/verify')

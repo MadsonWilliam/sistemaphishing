@@ -84,6 +84,9 @@ docker compose up --build
 | GET  | `/api/companies/:id` | dono da empresa ou SUPER_ADMIN |
 | POST | `/api/sending-domains` | SUPER_ADMIN |
 | GET  | `/api/sending-domains` | SUPER_ADMIN |
+| PATCH | `/api/sending-domains/:id` | SUPER_ADMIN |
+| DELETE | `/api/sending-domains/:id` | SUPER_ADMIN |
+| DELETE | `/api/sending-domains/:id/identities/:identityId` | SUPER_ADMIN |
 | POST | `/api/sending-domains/:id/verify` | SUPER_ADMIN |
 | POST | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
 | GET  | `/api/sending-domains/:id/identities` | SUPER_ADMIN |
