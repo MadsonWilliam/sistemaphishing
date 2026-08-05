@@ -57,8 +57,17 @@ async function seedSuperAdmin() {
 }
 
 async function main() {
-  await seedSuperAdmin();
-  await seedTemplates();
+  // Seeding nunca pode derrubar o boot da aplicação — erros são logados, não propagados.
+  try {
+    await seedSuperAdmin();
+  } catch (e) {
+    console.error('[seed] super admin falhou (seguindo):', e);
+  }
+  try {
+    await seedTemplates();
+  } catch (e) {
+    console.error('[seed] biblioteca de iscas falhou (seguindo):', e);
+  }
 }
 
 main()
