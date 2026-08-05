@@ -19,6 +19,7 @@ export interface OutboxItem {
   html: string;
   text?: string | null;
   campaignId?: string | null;
+  campaignTargetId?: string | null;
 }
 
 export interface DripOptions {
@@ -77,6 +78,7 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
       html: i.html,
       text: i.text ?? null,
       campaignId: i.campaignId ?? null,
+      campaignTargetId: i.campaignTargetId ?? null,
       scheduledAt: i.scheduledAt,
     }));
     const res = await this.prisma.emailOutbox.createMany({ data });
@@ -157,6 +159,16 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
           lastError: null,
         },
       });
+      // Marca o alvo de campanha como enviado (evento SENT do rastreio).
+      if (msg.campaignTargetId) {
+        await this.prisma.trackingEvent.create({
+          data: { targetId: msg.campaignTargetId, type: 'SENT' },
+        });
+        await this.prisma.campaignTarget.updateMany({
+          where: { id: msg.campaignTargetId, sentAt: null },
+          data: { sentAt: new Date() },
+        });
+      }
     } catch (err) {
       const attempts = msg.attempts + 1;
       const message = err instanceof Error ? err.message : 'Falha no envio';

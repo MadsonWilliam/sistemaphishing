@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -9,8 +9,12 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  app.setGlobalPrefix('api');
-  app.use(helmet());
+  // Rotas de rastreio ficam na raiz (/t/...), fora do prefixo /api.
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 't/(.*)', method: RequestMethod.ALL }],
+  });
+  // helmet com CSP desativado: as landings usam estilos inline.
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   const origins = config
     .getOrThrow<string>('CORS_ORIGIN')

@@ -38,6 +38,8 @@ model Company {
   authorizations AuthorizationConsent[]
   sendingDomains SendingDomain[]
   emailOutbox    EmailOutbox[]
+  templates      Template[]
+  campaigns      Campaign[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -168,8 +170,9 @@ model EmailOutbox {
   sentAt      DateTime?
   providerMessageId String?
 
-  // Ligação com campanha entra na Sprint 2 (tracking por token).
-  campaignId String?
+  // Ligação com campanha/rastreio (Sprint 2).
+  campaignId       String?
+  campaignTargetId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,6 +180,143 @@ model EmailOutbox {
   @@index([status, scheduledAt])
   @@index([companyId])
   @@map("email_outbox")
+}
+
+// ─── Templates, campanhas e rastreio ──────────────────────────
+enum TemplateSector {
+  FINANCEIRO
+  CONTABILIDADE
+  JURIDICO
+  RH
+  TI
+  ADMINISTRATIVO
+  COMPRAS
+  LOGISTICA
+  DIRETORIA
+  GERAL
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELED
+}
+
+// Comportamento após o clique — configurável por campanha.
+enum PostClickBehavior {
+  BLANK // registra o clique e mostra tela em branco
+  EDUCATIONAL // vai direto para a página educativa ("você foi testado")
+  FORM // formulário falso; ao enviar (sem salvar credenciais) vai para a educativa
+}
+
+enum TrackingEventType {
+  SENT
+  OPENED
+  CLICKED
+  ATTACHMENT_OPENED
+  FORM_SUBMITTED
+  REPORTED
+}
+
+// Qual o gatilho principal da isca (para as boas práticas do relatório).
+enum TemplateTrigger {
+  LINK
+  ATTACHMENT
+  FORM
+}
+
+model Template {
+  id          String          @id @default(uuid())
+  name        String
+  sector      TemplateSector  @default(GERAL)
+  trigger     TemplateTrigger @default(LINK)
+  difficulty  Int             @default(2) // 1 fácil · 2 médio · 3 difícil
+  subject     String
+  html        String // corpo com placeholders: {{nome}}, {{link}}, {{empresa}}
+  landingHtml String? // página educativa custom (senão usa a padrão)
+
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String? // null = biblioteca da plataforma
+
+  campaigns Campaign[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("templates")
+}
+
+model Campaign {
+  id     String         @id @default(uuid())
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  name   String
+  template   Template   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateId String
+  status CampaignStatus @default(DRAFT)
+
+  // Envio gota-a-gota
+  scheduledStartAt  DateTime?
+  dripWindowSeconds Int       @default(0)
+  dripJitterSeconds Int       @default(0)
+
+  // Configuração pós-clique (por envio)
+  postClickBehavior  PostClickBehavior @default(EDUCATIONAL)
+  showReportButton   Boolean           @default(false)
+  microTraining      Boolean           @default(false)
+  landingRedirectUrl String?
+
+  targets   CampaignTarget[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@map("campaigns")
+}
+
+model CampaignTarget {
+  id         String   @id @default(uuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  token      String   @unique // opaco, usado nos links/pixel de rastreio
+
+  toEmail    String
+  toName     String?
+  department String?
+
+  senderIdentityId String? // atribuído no envio (rotação de remetente)
+  outboxId         String? // referência ao EmailOutbox gerado
+
+  // Primeiro evento de cada tipo (conveniência para a dashboard)
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  submittedAt DateTime?
+  reportedAt  DateTime?
+
+  events    TrackingEvent[]
+  createdAt DateTime        @default(now())
+
+  @@index([campaignId])
+  @@map("campaign_targets")
+}
+
+model TrackingEvent {
+  id       String            @id @default(uuid())
+  target   CampaignTarget    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  targetId String
+  type     TrackingEventType
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([targetId])
+  @@index([type])
+  @@map("tracking_events")
 }
 
 // ─── Autorização / consentimento (trilho legal LGPD) ──────────

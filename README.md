@@ -94,6 +94,19 @@ docker compose up --build
 | POST | `/api/outbox/drip-test` | SUPER_ADMIN |
 | GET  | `/api/outbox` | SUPER_ADMIN |
 | GET  | `/api/outbox/stats` | SUPER_ADMIN |
+| POST/GET/DELETE | `/api/templates` | SUPER_ADMIN |
+| POST | `/api/campaigns` | SUPER_ADMIN |
+| GET  | `/api/campaigns` | SUPER_ADMIN |
+| GET  | `/api/campaigns/:id` | SUPER_ADMIN |
+| GET  | `/api/campaigns/:id/targets` | SUPER_ADMIN |
+| GET  | `/api/campaigns/:id/stats` | SUPER_ADMIN |
+| POST | `/api/campaigns/:id/send` | SUPER_ADMIN |
+| POST | `/api/campaigns/:id/cancel` | SUPER_ADMIN |
+| GET  | `/t/o/:token.png` | público (pixel de abertura) |
+| GET  | `/t/c/:token` | público (clique → landing) |
+| GET  | `/t/a/:token` | público (anexo → landing) |
+| POST | `/t/f/:token` | público (form falso; valores ignorados) |
+| GET  | `/t/r/:token` | público (reportar phishing) |
 
 ## Roadmap
 
@@ -101,7 +114,10 @@ docker compose up --build
 - **Sprint 1 (atual):** domínios de e-mail (SMTP plugável por domínio, credenciais
   cifradas AES-256-GCM), identidades de remetente, outbox no Postgres com
   agendador gota-a-gota (jitter + retry/backoff), sem Redis ✅
-- **Sprint 2:** tokens únicos, tracking, landing educativa configurável
+- **Sprint 2 (atual):** tokens únicos por destinatário, rastreio
+  (abertura/clique/anexo/formulário/reporte), campanhas ligadas ao outbox,
+  landing educativa configurável por envio (branco/educativa/formulário,
+  botão reportar, micro-treino), funil + recorte por setor ✅
 - **Sprint 3:** editor de e-mail + biblioteca de templates por setor
 - **Sprint 4:** dashboard interativa (cross-filter, tempo real)
 - **Sprint 5:** relatórios executivos + boas práticas + evolução
