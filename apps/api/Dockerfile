@@ -31,6 +31,6 @@ COPY --from=builder /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 3333
 
-# Aplica migrações (obrigatório) e sobe a API. O seed é best-effort: nunca
-# bloqueia o start — se falhar, apenas loga e a aplicação sobe mesmo assim.
-CMD ["sh", "-c", "npx prisma migrate deploy && (npx ts-node --transpile-only prisma/seed.ts || echo '[boot] seed falhou, seguindo') && node dist/main.js"]
+# Boot resiliente: migrate e seed são best-effort e NUNCA impedem o start da API
+# (as migrações já aplicadas garantem o schema). Erros vão para o log.
+CMD ["sh", "-c", "(npx prisma migrate deploy || echo '[boot] migrate deploy falhou, seguindo'); (npx ts-node --transpile-only prisma/seed.ts || echo '[boot] seed falhou, seguindo'); node dist/main.js"]
