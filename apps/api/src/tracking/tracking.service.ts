@@ -12,6 +12,7 @@ import {
   fakeFormPage,
   reportedPage,
 } from './landing.templates';
+import { classifyAccess } from './bot-detection';
 
 // GIF transparente de 1x1 para o pixel de abertura.
 const PIXEL = Buffer.from(
@@ -42,21 +43,26 @@ export class TrackingService {
   }
 
   // Registra o evento e atualiza o "primeiro X em" do alvo (idempotente por tipo).
+  // Eventos automáticos (proxy/scanner) são gravados, mas NÃO marcam o funil.
   private async record(
     target: CampaignTarget,
     type: TrackingEventType,
     meta: ReqMeta,
     firstField?: keyof CampaignTarget,
   ) {
+    const verdict = classifyAccess(meta.userAgent, target.sentAt);
     await this.prisma.trackingEvent.create({
       data: {
         targetId: target.id,
         type,
         ip: meta.ip?.slice(0, 64),
         userAgent: meta.userAgent?.slice(0, 300),
+        isBot: verdict.isBot,
+        botReason: verdict.reason ?? null,
       },
     });
-    if (firstField && !target[firstField]) {
+    // Só interações humanas contam no funil.
+    if (!verdict.isBot && firstField && !target[firstField]) {
       await this.prisma.campaignTarget.update({
         where: { id: target.id },
         data: { [firstField]: new Date() },

@@ -312,10 +312,14 @@ model TrackingEvent {
   type     TrackingEventType
   ip        String?
   userAgent String?
+  // Evento automático (proxy/scanner/lib) vs. humano — não conta no funil.
+  isBot     Boolean @default(false)
+  botReason String?
   createdAt DateTime @default(now())
 
   @@index([targetId])
   @@index([type])
+  @@index([isBot])
   @@map("tracking_events")
 }
 

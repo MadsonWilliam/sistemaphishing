@@ -159,9 +159,24 @@ export class CampaignsService {
       };
     });
 
+    // Transparência: acessos automáticos (proxy/scanner) filtrados do funil.
+    const botEvents = await this.prisma.trackingEvent.groupBy({
+      by: ['type'],
+      where: { isBot: true, target: { campaignId: id } },
+      _count: { _all: true },
+    });
+    const automatedFiltered = botEvents.reduce<Record<string, number>>(
+      (acc, e) => {
+        acc[e.type] = e._count._all;
+        return acc;
+      },
+      {},
+    );
+
     const rate = (n: number) => (total ? +((n / total) * 100).toFixed(1) : 0);
     return {
       funnel: { total, sent, opened, clicked, submitted, reported },
+      automatedFiltered,
       rates: {
         openRate: rate(opened),
         clickRate: rate(clicked),
