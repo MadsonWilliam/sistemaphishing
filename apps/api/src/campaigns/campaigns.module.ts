@@ -7,5 +7,6 @@ import { OutboxModule } from '../outbox/outbox.module';
   imports: [OutboxModule],
   controllers: [CampaignsController],
   providers: [CampaignsService],
+  exports: [CampaignsService],
 })
 export class CampaignsModule {}

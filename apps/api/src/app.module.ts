@@ -11,6 +11,7 @@ import { DomainsModule } from './domains/domains.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { TemplatesModule } from './templates/templates.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { ReportsModule } from './reports/reports.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -31,6 +32,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     OutboxModule,
     TemplatesModule,
     CampaignsModule,
+    ReportsModule,
     TrackingModule,
     HealthModule,
   ],
