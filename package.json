@@ -1,0 +1,20 @@
+{
+  "name": "sistemaphishing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma SaaS de simulação de phishing e conscientização corporativa",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev --workspace @phish/api",
+    "api:build": "npm run build --workspace @phish/api",
+    "api:prisma:generate": "npm run prisma:generate --workspace @phish/api",
+    "api:prisma:migrate": "npm run prisma:migrate --workspace @phish/api",
+    "api:seed": "npm run seed --workspace @phish/api"
+  },
+  "engines": {
+    "node": ">=18.18 <21"
+  }
+}
