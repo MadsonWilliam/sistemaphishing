@@ -355,4 +355,14 @@ export class CampaignsService {
     });
     return { canceled: true };
   }
+
+  // Remove a campanha e tudo dela (alvos→eventos por cascade; fila associada).
+  async remove(id: string) {
+    await this.findOne(id);
+    await this.prisma.$transaction([
+      this.prisma.emailOutbox.deleteMany({ where: { campaignId: id } }),
+      this.prisma.campaign.delete({ where: { id } }),
+    ]);
+    return { deleted: true };
+  }
 }

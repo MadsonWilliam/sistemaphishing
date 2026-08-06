@@ -60,6 +60,18 @@ export class CompaniesService {
     });
   }
 
+  // Remove a empresa e tudo dela (usuários, campanhas→alvos→eventos,
+  // autorizações). Domínios/templates ficam com companyId nulo (SetNull).
+  async remove(id: string) {
+    const exists = await this.prisma.company.findUnique({ where: { id } });
+    if (!exists) throw new NotFoundException('Empresa não encontrada.');
+    await this.prisma.$transaction([
+      this.prisma.emailOutbox.deleteMany({ where: { companyId: id } }),
+      this.prisma.company.delete({ where: { id } }),
+    ]);
+    return { deleted: true };
+  }
+
   async findOne(id: string) {
     const company = await this.prisma.company.findUnique({
       where: { id },

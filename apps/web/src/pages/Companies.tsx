@@ -33,6 +33,12 @@ export function Companies() {
     queryFn: async () => (await api.get<Company[]>('/companies')).data,
   });
 
+  const del = useMutation({
+    mutationFn: async (id: string) =>
+      (await api.delete(`/companies/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+
   const create = useMutation({
     mutationFn: async () => (await api.post('/companies', form)).data,
     onSuccess: () => {
@@ -108,6 +114,7 @@ export function Companies() {
               <th className="text-left font-medium px-4 py-3">Empresa</th>
               <th className="text-left font-medium px-4 py-3">Status</th>
               <th className="text-left font-medium px-4 py-3">Usuários</th>
+              <th className="text-right font-medium px-4 py-3">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -120,11 +127,23 @@ export function Companies() {
                 <td className="px-4 py-3 text-slate-400">
                   {c._count?.users ?? '—'}
                 </td>
+                <td className="px-4 py-3 text-right">
+                  <Btn
+                    variant="danger"
+                    onClick={() =>
+                      confirm(
+                        `Excluir "${c.name}" e todas as suas campanhas/dados?`,
+                      ) && del.mutate(c.id)
+                    }
+                  >
+                    Excluir
+                  </Btn>
+                </td>
               </tr>
             ))}
             {companies.data?.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                   Nenhuma empresa ainda.
                 </td>
               </tr>

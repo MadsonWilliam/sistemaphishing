@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -39,5 +40,11 @@ export class CompaniesController {
       throw new ForbiddenException('Acesso restrito à sua própria empresa.');
     }
     return this.companies.findOne(id);
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.companies.remove(id);
   }
 }

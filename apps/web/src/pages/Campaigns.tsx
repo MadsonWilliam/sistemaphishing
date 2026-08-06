@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Badge, Btn, Card, PageHeader } from '../components/ui';
 
@@ -45,6 +45,24 @@ function ShareButton({ id }: { id: string }) {
   return (
     <Btn variant="ghost" onClick={() => share.mutate()} disabled={share.isPending}>
       Compartilhar relatório
+    </Btn>
+  );
+}
+
+function DeleteButton({ id }: { id: string }) {
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: async () => (await api.delete(`/campaigns/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+  return (
+    <Btn
+      variant="danger"
+      onClick={() =>
+        confirm('Excluir esta campanha e todos os seus dados?') && del.mutate()
+      }
+    >
+      Excluir
     </Btn>
   );
 }
@@ -102,6 +120,7 @@ export function Campaigns() {
                       <Btn variant="ghost">Dashboard</Btn>
                     </Link>
                     <ShareButton id={c.id} />
+                    <DeleteButton id={c.id} />
                   </div>
                 </td>
               </tr>

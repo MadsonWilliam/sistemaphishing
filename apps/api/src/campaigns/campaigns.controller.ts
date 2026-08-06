@@ -70,4 +70,9 @@ export class CampaignsController {
   cancel(@Param('id') id: string) {
     return this.campaigns.cancel(id);
   }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.campaigns.remove(id);
+  }
 }
