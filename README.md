@@ -104,6 +104,8 @@ docker compose up --build
 | GET  | `/api/campaigns/:id/report` | SUPER_ADMIN (boas práticas + evolução) |
 | POST | `/api/campaigns/:id/send` | SUPER_ADMIN |
 | POST | `/api/campaigns/:id/cancel` | SUPER_ADMIN |
+| POST/DELETE | `/api/campaigns/:id/share` | SUPER_ADMIN (link público) |
+| GET  | `/r/:token` | público (relatório read-only p/ prospect) |
 | GET  | `/t/o/:token.png` | público (pixel de abertura) |
 | GET  | `/t/c/:token` | público (clique → landing) |
 | GET  | `/t/a/:token` | público (anexo → landing) |

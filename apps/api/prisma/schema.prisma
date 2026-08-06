@@ -269,6 +269,9 @@ model Campaign {
   microTraining      Boolean           @default(false)
   landingRedirectUrl String?
 
+  // Link público de relatório (read-only) para prospects, sem login.
+  reportToken String? @unique
+
   targets   CampaignTarget[]
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt

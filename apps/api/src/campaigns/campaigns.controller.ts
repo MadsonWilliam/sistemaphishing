@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -45,6 +46,18 @@ export class CampaignsController {
   @HttpCode(200)
   send(@Param('id') id: string, @Body() dto: SendCampaignDto) {
     return this.campaigns.send(id, dto);
+  }
+
+  @Post(':id/share')
+  @HttpCode(200)
+  share(@Param('id') id: string) {
+    return this.campaigns.share(id);
+  }
+
+  @Delete(':id/share')
+  @HttpCode(200)
+  unshare(@Param('id') id: string) {
+    return this.campaigns.unshare(id);
   }
 
   @Post(':id/cancel')

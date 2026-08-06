@@ -32,7 +32,7 @@ import { RolesGuard } from './common/guards/roles.guard';
       ? [
           ServeStaticModule.forRoot({
             rootPath: join(__dirname, '..', '..', 'web', 'dist'),
-            exclude: ['/api', '/api/(.*)', '/t', '/t/(.*)'],
+            exclude: ['/api', '/api/(.*)', '/t', '/t/(.*)', '/r', '/r/(.*)'],
           }),
         ]
       : []),

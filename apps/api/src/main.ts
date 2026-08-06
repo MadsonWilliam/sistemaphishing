@@ -9,9 +9,12 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  // Rotas de rastreio ficam na raiz (/t/...), fora do prefixo /api.
+  // Rastreio (/t/...) e relatório público (/r/...) ficam na raiz, fora de /api.
   app.setGlobalPrefix('api', {
-    exclude: [{ path: 't/(.*)', method: RequestMethod.ALL }],
+    exclude: [
+      { path: 't/(.*)', method: RequestMethod.ALL },
+      { path: 'r/(.*)', method: RequestMethod.ALL },
+    ],
   });
   // helmet com CSP desativado: as landings usam estilos inline.
   app.use(helmet({ contentSecurityPolicy: false }));

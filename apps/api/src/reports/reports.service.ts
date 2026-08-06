@@ -64,6 +64,16 @@ export class ReportsService {
     return total ? +((clicked / total) * 100).toFixed(1) : 0;
   }
 
+  // Resolve o relatório pelo token público (link read-only p/ prospects).
+  async buildReportByToken(token: string) {
+    const c = await this.prisma.campaign.findUnique({
+      where: { reportToken: token },
+      select: { id: true },
+    });
+    if (!c) return null;
+    return this.buildReport(c.id);
+  }
+
   async buildReport(campaignId: string) {
     const campaign = await this.campaigns.findOne(campaignId);
     const stats = await this.campaigns.getStats(campaignId);

@@ -295,6 +295,34 @@ export class CampaignsService {
     return { enqueued: result.enqueued, status: CampaignStatus.SENDING };
   }
 
+  // Gera (ou reaproveita) o token do relatório público read-only.
+  async share(id: string) {
+    await this.findOne(id);
+    const existing = await this.prisma.campaign.findUnique({
+      where: { id },
+      select: { reportToken: true },
+    });
+    let token = existing?.reportToken ?? null;
+    if (!token) {
+      token = randomBytes(18).toString('hex');
+      await this.prisma.campaign.update({
+        where: { id },
+        data: { reportToken: token },
+      });
+    }
+    const base = this.config.getOrThrow<string>('APP_BASE_URL');
+    return { token, url: `${base}/r/${token}` };
+  }
+
+  async unshare(id: string) {
+    await this.findOne(id);
+    await this.prisma.campaign.update({
+      where: { id },
+      data: { reportToken: null },
+    });
+    return { revoked: true };
+  }
+
   async cancel(id: string) {
     await this.findOne(id);
     // Cancela os e-mails ainda pendentes desta campanha.
