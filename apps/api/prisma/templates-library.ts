@@ -21,7 +21,9 @@ export interface LibraryTemplate {
   name: string;
   sector: Sector;
   trigger: Trigger;
-  difficulty: number; // 1 fácil · 2 médio · 3 difícil
+  // Convenção: 1 = FÁCIL da pessoa identificar como golpe (poucos caem) …
+  // 3 = DIFÍCIL de identificar / mais convincente (muitos caem).
+  difficulty: number;
   subject: string;
   html: string;
 }

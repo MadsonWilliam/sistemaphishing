@@ -26,6 +26,12 @@ interface Domain {
   identities: Identity[];
 }
 
+const DIFF_LABEL: Record<number, string> = {
+  1: 'fácil de identificar',
+  2: 'moderada',
+  3: 'difícil de identificar',
+};
+
 export function NewCampaign() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -140,10 +146,15 @@ export function NewCampaign() {
               <option value="">Selecione…</option>
               {templates.data?.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} — {t.sector} (dif {t.difficulty})
+                  {t.name} — {t.sector} · dif {t.difficulty} (
+                  {DIFF_LABEL[t.difficulty] ?? '—'})
                 </option>
               ))}
             </select>
+            <span className="block text-xs text-slate-500 mt-1">
+              Dificuldade: 1 = fácil da pessoa identificar (poucos caem) · 3 =
+              difícil de identificar / mais convincente (muitos caem).
+            </span>
           </label>
           <Field
             label="Nome da campanha"

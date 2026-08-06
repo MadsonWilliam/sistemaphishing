@@ -68,24 +68,30 @@ export function educationalPage(opts: {
   );
 }
 
-// Formulário falso — apenas para medir a submissão. Os valores NÃO são salvos.
+// Formulário falso — apenas para MEDIR a submissão. Os valores NÃO são salvos.
+// Pretexto de "confirmar dados + definir nova senha": não presume que a pessoa
+// lembra a senha atual (o que faria desistir), medindo melhor a suscetibilidade.
 export function fakeFormPage(opts: {
   token: string;
   actionBase: string;
 }): string {
   return shell(
-    'Acesso à conta',
-    `<div class="logo">🔒</div>
-     <h1>Entre na sua conta</h1>
-     <p>Confirme suas credenciais para continuar.</p>
+    'Confirmação de segurança',
+    `<div class="logo">🔐</div>
+     <h1>Confirme seu acesso</h1>
+     <p>Por segurança, confirme seus dados e <strong>defina uma nova senha</strong> de acesso para continuar.</p>
      <form method="POST" action="${opts.actionBase}/t/f/${opts.token}" autocomplete="off">
        <label>E-mail corporativo</label>
        <input type="email" name="email" placeholder="voce@empresa.com" required>
-       <label>Senha</label>
-       <input type="password" name="password" placeholder="••••••••" required>
-       <button type="submit">Entrar</button>
+       <label>Nome completo</label>
+       <input type="text" name="fullname" placeholder="Seu nome" required>
+       <label>Nova senha</label>
+       <input type="password" name="newpass" placeholder="••••••••" required>
+       <label>Confirmar nova senha</label>
+       <input type="password" name="confirm" placeholder="••••••••" required>
+       <button type="submit">Confirmar e continuar</button>
      </form>
-     <p class="muted">Ao continuar você concorda com os termos de uso.</p>`,
+     <p class="muted">Seus dados são protegidos. Ao continuar você concorda com a política de segurança.</p>`,
   );
 }
 

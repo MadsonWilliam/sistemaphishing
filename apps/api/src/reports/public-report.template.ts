@@ -5,7 +5,12 @@ interface ReportData {
   campaign: {
     name: string;
     company: string;
-    template: { sector: string; trigger: string; difficulty: number };
+    template: {
+      sector: string;
+      trigger: string;
+      difficulty: number;
+      difficultyLabel?: string;
+    };
     status: string;
   };
   summary: {
@@ -106,7 +111,7 @@ export function renderReportPage(d: ReportData): string {
 
   <div class="card">
     <h1>${esc(d.campaign.company)}</h1>
-    <div style="color:#64748b;font-size:14px;margin-bottom:16px">Campanha: ${esc(d.campaign.name)} · Isca do setor ${esc(d.campaign.template.sector)} · dificuldade ${d.campaign.template.difficulty}/3</div>
+    <div style="color:#64748b;font-size:14px;margin-bottom:16px">Campanha: ${esc(d.campaign.name)} · Isca do setor ${esc(d.campaign.template.sector)} · dificuldade ${d.campaign.template.difficulty}/3${d.campaign.template.difficultyLabel ? ' (' + esc(d.campaign.template.difficultyLabel) + ')' : ''}</div>
     <div class="headline">${esc(s.headline)}</div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">
       ${kpi('Enviados', s.sent)}

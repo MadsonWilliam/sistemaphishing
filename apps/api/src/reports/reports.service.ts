@@ -5,6 +5,14 @@ import { CampaignsService } from '../campaigns/campaigns.service';
 
 export type Severity = 'high' | 'medium' | 'low';
 
+// Convenção de dificuldade: 1 = fácil da pessoa identificar (poucos caem) …
+// 3 = difícil de identificar / mais convincente (muitos caem).
+export const DIFFICULTY_LABEL: Record<number, string> = {
+  1: 'fácil de identificar',
+  2: 'moderada',
+  3: 'difícil de identificar',
+};
+
 export interface Recommendation {
   category: string;
   severity: Severity;
@@ -196,6 +204,8 @@ export class ReportsService {
           sector: campaign.template.sector,
           trigger: campaign.template.trigger,
           difficulty: campaign.template.difficulty,
+          difficultyLabel:
+            DIFFICULTY_LABEL[campaign.template.difficulty] ?? '—',
         },
         status: campaign.status,
       },
