@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
+  HttpCode,
   Ip,
   Param,
   Post,
@@ -87,5 +89,20 @@ export class TrackingController {
     @Headers('user-agent') ua: string,
   ) {
     return this.tracking.trackReport(token, { ip, userAgent: ua });
+  }
+
+  // Beacon de confirmação humana (só navegador que roda JS chega aqui).
+  @Post('confirm/:token')
+  @HttpCode(204)
+  async confirm(
+    @Param('token') token: string,
+    @Body() body: { type?: string },
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ) {
+    const type = body?.type;
+    if (type === 'click' || type === 'attachment' || type === 'report') {
+      await this.tracking.confirmAccess(token, type, { ip, userAgent: ua });
+    }
   }
 }

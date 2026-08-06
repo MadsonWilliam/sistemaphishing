@@ -110,6 +110,25 @@ export class CampaignsService {
     });
   }
 
+  // Auditoria de eventos brutos (ver UA/bot de cada acesso) — transparência.
+  async listEvents(id: string) {
+    await this.findOne(id);
+    return this.prisma.trackingEvent.findMany({
+      where: { target: { campaignId: id } },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+      select: {
+        type: true,
+        isBot: true,
+        botReason: true,
+        ip: true,
+        userAgent: true,
+        createdAt: true,
+        target: { select: { toEmail: true } },
+      },
+    });
+  }
+
   // Funil de conversão + recorte por setor (base da dashboard/relatório).
   async getStats(id: string) {
     await this.findOne(id);

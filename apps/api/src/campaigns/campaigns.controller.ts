@@ -37,6 +37,11 @@ export class CampaignsController {
     return this.campaigns.listTargets(id);
   }
 
+  @Get(':id/events')
+  events(@Param('id') id: string) {
+    return this.campaigns.listEvents(id);
+  }
+
   @Get(':id/stats')
   stats(@Param('id') id: string) {
     return this.campaigns.getStats(id);
