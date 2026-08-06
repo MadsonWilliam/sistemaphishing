@@ -8,33 +8,69 @@ export function FunnelChart({
 }: {
   data: { sent: number; opened: number; clicked: number; submitted: number };
 }) {
+  // Rótulos INTERNOS (name: value) para nunca estourarem a largura do card.
   const option = {
     tooltip: { trigger: 'item', formatter: '{b}: {c}' },
     series: [
       {
         type: 'funnel',
-        left: '5%',
-        right: '5%',
-        top: 10,
-        bottom: 10,
-        minSize: '20%',
-        gap: 3,
-        label: { color: '#e2e8f0', formatter: '{b}\n{c}' },
+        left: '2%',
+        right: '2%',
+        top: 8,
+        bottom: 8,
+        width: '96%',
+        minSize: '30%',
+        maxSize: '100%',
+        gap: 2,
+        funnelAlign: 'center',
+        label: {
+          position: 'inside',
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 600,
+          formatter: '{b}: {c}',
+        },
+        labelLine: { show: false },
         itemStyle: { borderColor: '#0f172a', borderWidth: 2 },
+        emphasis: { label: { fontSize: 14 } },
         data: [
           { value: data.sent, name: 'Enviado', itemStyle: { color: '#3b82f6' } },
           { value: data.opened, name: 'Aberto', itemStyle: { color: '#22c55e' } },
           { value: data.clicked, name: 'Clicado', itemStyle: { color: '#f59e0b' } },
           {
             value: data.submitted,
-            name: 'Submeteu dados',
+            name: 'Submeteu',
             itemStyle: { color: '#ef4444' },
           },
         ],
       },
     ],
   };
-  return <ReactECharts option={option} style={{ height: 280 }} />;
+  return <ReactECharts option={option} style={{ height: 260, width: '100%' }} />;
+}
+
+// Legenda explicativa das etapas do funil.
+export function FunnelLegend() {
+  const items = [
+    { c: '#3b82f6', label: 'Enviado', desc: 'e-mails que saíram' },
+    { c: '#22c55e', label: 'Aberto', desc: 'abriram o e-mail' },
+    { c: '#f59e0b', label: 'Clicado', desc: 'clicaram no link (caíram)' },
+    { c: '#ef4444', label: 'Submeteu', desc: 'enviaram dados no formulário' },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-xs text-slate-400">
+      {items.map((i) => (
+        <div key={i.label} className="flex items-center gap-2">
+          <span
+            className="w-2.5 h-2.5 rounded-sm shrink-0"
+            style={{ background: i.c }}
+          />
+          <span className="text-slate-300">{i.label}</span>
+          <span>— {i.desc}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function SectorChart({

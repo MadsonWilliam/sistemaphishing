@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { FunnelChart, SectorChart } from '../components/charts';
+import { FunnelChart, FunnelLegend, SectorChart } from '../components/charts';
 
 interface Campaign {
   id: string;
@@ -171,9 +171,14 @@ export function Dashboard() {
 
       {/* Gráficos */}
       <div className="grid lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 overflow-hidden">
           <div className="text-sm font-medium mb-2">Funil de conversão</div>
           {f && <FunnelChart data={f} />}
+          <FunnelLegend />
+          <p className="text-xs text-slate-500 mt-2">
+            "Reportaram" é um acerto (fora do funil): quem reportou o e-mail
+            como phishing em vez de cair.
+          </p>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
           <div className="flex items-center justify-between mb-2">
