@@ -263,20 +263,36 @@ export class TrackingService {
     if (!target || !CONFIRM_MAP[type]) return;
 
     const uaVerdict = classifyAccess(meta.userAgent, null);
+    const sinceSend = target.sentAt
+      ? Date.now() - target.sentAt.getTime()
+      : null;
+
     let isBot = uaVerdict.isBot;
     let reason: string | undefined = uaVerdict.reason;
+    // Headless.
     if (!isBot && signals.wd === true) {
       isBot = true;
       reason = 'webdriver-headless';
     }
+    // Renderização instantânea (sandbox).
     if (!isBot && typeof signals.dwell === 'number' && signals.dwell < 800) {
       isBot = true;
       reason = 'permanencia-curta';
     }
-    if (!isBot && !signals.interacted && signals.focus !== true) {
+    // EXIGE interação real de mouse/scroll/toque — sandbox finge foco, mas não
+    // gera interação. (Foco sozinho não basta.)
+    if (!isBot && signals.interacted !== true) {
       isBot = true;
-      reason = 'sem-engajamento-humano';
+      reason = 'sem-interacao-real';
     }
+    // Cedo demais após o envio = detonação de scanner na entrega, não humano.
+    if (!isBot && sinceSend !== null && sinceSend < 45_000) {
+      isBot = true;
+      reason = 'cedo-demais-scanner';
+    }
+
+    // Log dos sinais para diagnóstico (visível na auditoria de eventos).
+    const dbg = ` [d=${signals.dwell} f=${signals.focus} i=${signals.interacted} wd=${signals.wd} t=${sinceSend}]`;
 
     const { type: eventType, milestone } = CONFIRM_MAP[type];
     await this.prisma.trackingEvent.create({
@@ -286,7 +302,7 @@ export class TrackingService {
         ip: meta.ip?.slice(0, 64),
         userAgent: meta.userAgent?.slice(0, 300),
         isBot,
-        botReason: isBot ? reason ?? 'automatico' : 'confirmado-humano',
+        botReason: (isBot ? reason ?? 'automatico' : 'confirmado-humano') + dbg,
       },
     });
     if (!isBot) await this.applyFunnel(target, milestone);
