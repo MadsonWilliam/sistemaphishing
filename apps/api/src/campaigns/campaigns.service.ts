@@ -226,6 +226,10 @@ export class CampaignsService {
       .replace(/{{\s*link\s*}}/gi, link)
       .replace(/{{\s*(anexo|attachment)\s*}}/gi, attachment);
 
+    // Link-canário (honeypot): invisível ao humano, mas scanners que varrem
+    // todos os links o buscam — delatando a varredura automática.
+    html += `<a href="${baseUrl}/t/x/${p.token}" style="display:none;font-size:1px;color:transparent" aria-hidden="true">.</a>`;
+
     // Pixel de abertura.
     html += `<img src="${baseUrl}/t/o/${p.token}.png" width="1" height="1" alt="" style="display:none">`;
 

@@ -50,6 +50,13 @@ const CONFIRM_MAP: Record<
   report: { type: TrackingEventType.REPORTED, milestone: 'reported' },
 };
 
+// Tipos de ação considerados na varredura (o que um scanner abre em lote).
+const SWEEP_ACTIONS: TrackingEventType[] = [
+  TrackingEventType.CLICKED,
+  TrackingEventType.ATTACHMENT_OPENED,
+  TrackingEventType.REPORTED,
+];
+
 @Injectable()
 export class TrackingService {
   private readonly logger = new Logger(TrackingService.name);
@@ -226,6 +233,32 @@ export class TrackingService {
     return { html: this.withBeacon(page, token, confirmType) };
   }
 
+  // Toque no link-canário (honeypot): marca o alvo como varrido por scanner.
+  async trackCanary(token: string, meta: ReqMeta): Promise<void> {
+    await this.prisma.campaignTarget.updateMany({
+      where: { token },
+      data: { lastCanaryAt: new Date() },
+    });
+  }
+
+  // Anula um alvo delatado como varredura: reverte flags de compromisso/reporte
+  // e marca os eventos recentes de ação como bot.
+  private async revertSweep(targetId: string, reason: string): Promise<void> {
+    await this.prisma.campaignTarget.update({
+      where: { id: targetId },
+      data: { clickedAt: null, submittedAt: null, reportedAt: null },
+    });
+    await this.prisma.trackingEvent.updateMany({
+      where: {
+        targetId,
+        isBot: false,
+        type: { in: SWEEP_ACTIONS },
+        createdAt: { gte: new Date(Date.now() - 8000) },
+      },
+      data: { isBot: true, botReason: reason },
+    });
+  }
+
   async trackReport(token: string, meta: ReqMeta): Promise<string> {
     const target = await this.findTarget(token);
     if (!target) return blankPage();
@@ -293,40 +326,28 @@ export class TrackingService {
 
     const { type: eventType, milestone } = CONFIRM_MAP[type];
 
-    // Varredura multi-link: um humano faz UMA ação por e-mail; o scanner abre
-    // vários links (ex.: clique E reporte) quase ao mesmo tempo. Se este alvo
-    // já registrou uma ação humana em OUTRO link há poucos segundos, os dois
-    // são varredura automática — anula ambos.
-    const ACTIONS: TrackingEventType[] = [
-      TrackingEventType.CLICKED,
-      TrackingEventType.ATTACHMENT_OPENED,
-      TrackingEventType.REPORTED,
-    ];
+    // Duas camadas anti-scanner comportamentais:
+    // (1) Canário: o alvo tocou o link OCULTO há pouco → é scanner varrendo.
+    // (2) Varredura multi-link: já registrou ação em OUTRO link há segundos
+    //     (humano faz UMA ação; scanner abre vários quase juntos).
     if (!isBot) {
-      const burst = await this.prisma.trackingEvent.findFirst({
-        where: {
-          targetId: target.id,
-          isBot: false,
-          type: { in: ACTIONS, not: eventType },
-          createdAt: { gte: new Date(Date.now() - 8000) },
-        },
-      });
-      if (burst) {
+      const canaryRecent =
+        !!target.lastCanaryAt &&
+        Date.now() - target.lastCanaryAt.getTime() < 15_000;
+      const burst = canaryRecent
+        ? null
+        : await this.prisma.trackingEvent.findFirst({
+            where: {
+              targetId: target.id,
+              isBot: false,
+              type: { in: SWEEP_ACTIONS, not: eventType },
+              createdAt: { gte: new Date(Date.now() - 8000) },
+            },
+          });
+      if (canaryRecent || burst) {
         isBot = true;
-        reason = 'varredura-multi-link';
-        await this.prisma.campaignTarget.update({
-          where: { id: target.id },
-          data: { clickedAt: null, submittedAt: null, reportedAt: null },
-        });
-        await this.prisma.trackingEvent.updateMany({
-          where: {
-            targetId: target.id,
-            isBot: false,
-            type: { in: ACTIONS },
-            createdAt: { gte: new Date(Date.now() - 8000) },
-          },
-          data: { isBot: true, botReason: 'varredura-multi-link' },
-        });
+        reason = canaryRecent ? 'link-oculto-scanner' : 'varredura-multi-link';
+        await this.revertSweep(target.id, reason);
       }
     }
 

@@ -54,6 +54,18 @@ export class TrackingController {
     res.set('Content-Type', 'text/html; charset=utf-8').send(out.html);
   }
 
+  // Link-canário (honeypot): só scanners buscam este link oculto.
+  @Get('x/:token')
+  async canary(
+    @Param('token') token: string,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+    @Res() res: Response,
+  ) {
+    await this.tracking.trackCanary(token, { ip, userAgent: ua });
+    res.set('Content-Type', 'image/gif').end(this.tracking.pixel);
+  }
+
   // "Abertura de anexo": /t/a/:token
   @Get('a/:token')
   async attachment(

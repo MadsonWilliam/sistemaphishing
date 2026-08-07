@@ -300,6 +300,8 @@ model CampaignTarget {
   clickedAt   DateTime?
   submittedAt DateTime?
   reportedAt  DateTime?
+  // Último toque no link-canário (honeypot) — indica varredura por scanner.
+  lastCanaryAt DateTime?
 
   events    TrackingEvent[]
   createdAt DateTime        @default(now())
