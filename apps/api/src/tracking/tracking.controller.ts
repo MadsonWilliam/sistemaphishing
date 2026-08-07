@@ -96,7 +96,14 @@ export class TrackingController {
   @HttpCode(204)
   async confirm(
     @Param('token') token: string,
-    @Body() body: { type?: string; dwell?: number; wd?: boolean },
+    @Body()
+    body: {
+      type?: string;
+      dwell?: number;
+      wd?: boolean;
+      focus?: boolean;
+      interacted?: boolean;
+    },
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
@@ -106,7 +113,12 @@ export class TrackingController {
         token,
         type,
         { ip, userAgent: ua },
-        { dwell: body?.dwell, wd: body?.wd },
+        {
+          dwell: body?.dwell,
+          wd: body?.wd,
+          focus: body?.focus,
+          interacted: body?.interacted,
+        },
       );
     }
   }

@@ -26,6 +26,16 @@ export function isOpenPrefetch(userAgent: string | undefined): boolean {
   return OPEN_PREFETCH_UA.test(ua);
 }
 
+// Scanners de SEGURANÇA "duros" (varredura de link/anexo no recebimento).
+// NÃO inclui image proxies de webmail (GoogleImageProxy/Yahoo), pois esses
+// representam a ABERTURA humana nesses provedores — filtrá-los zera aberturas.
+const SECURITY_SCANNER_UA =
+  /(safelinks|urldefense|proofpoint|mimecast|barracuda|messagelabs|ironport|forcepoint|fireeye|trendmicro|symantec|\bdefender\b|\batp\b|bitdefender|kaspersky|sophos|cisco|fortinet|cloudmark|\bavast\b|\bavg\b|virustotal|opendns)/i;
+
+export function isSecurityScanner(userAgent: string | undefined): boolean {
+  return SECURITY_SCANNER_UA.test((userAgent ?? '').trim());
+}
+
 export interface BotVerdict {
   isBot: boolean;
   reason?: string;
