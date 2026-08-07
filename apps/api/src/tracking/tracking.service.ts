@@ -291,10 +291,47 @@ export class TrackingService {
       reason = 'cedo-demais-scanner';
     }
 
+    const { type: eventType, milestone } = CONFIRM_MAP[type];
+
+    // Varredura multi-link: um humano faz UMA ação por e-mail; o scanner abre
+    // vários links (ex.: clique E reporte) quase ao mesmo tempo. Se este alvo
+    // já registrou uma ação humana em OUTRO link há poucos segundos, os dois
+    // são varredura automática — anula ambos.
+    const ACTIONS: TrackingEventType[] = [
+      TrackingEventType.CLICKED,
+      TrackingEventType.ATTACHMENT_OPENED,
+      TrackingEventType.REPORTED,
+    ];
+    if (!isBot) {
+      const burst = await this.prisma.trackingEvent.findFirst({
+        where: {
+          targetId: target.id,
+          isBot: false,
+          type: { in: ACTIONS, not: eventType },
+          createdAt: { gte: new Date(Date.now() - 8000) },
+        },
+      });
+      if (burst) {
+        isBot = true;
+        reason = 'varredura-multi-link';
+        await this.prisma.campaignTarget.update({
+          where: { id: target.id },
+          data: { clickedAt: null, submittedAt: null, reportedAt: null },
+        });
+        await this.prisma.trackingEvent.updateMany({
+          where: {
+            targetId: target.id,
+            isBot: false,
+            type: { in: ACTIONS },
+            createdAt: { gte: new Date(Date.now() - 8000) },
+          },
+          data: { isBot: true, botReason: 'varredura-multi-link' },
+        });
+      }
+    }
+
     // Log dos sinais para diagnóstico (visível na auditoria de eventos).
     const dbg = ` [d=${signals.dwell} f=${signals.focus} i=${signals.interacted} wd=${signals.wd} t=${sinceSend}]`;
-
-    const { type: eventType, milestone } = CONFIRM_MAP[type];
     await this.prisma.trackingEvent.create({
       data: {
         targetId: target.id,
