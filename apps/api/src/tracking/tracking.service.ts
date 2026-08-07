@@ -12,7 +12,7 @@ import {
   fakeFormPage,
   reportedPage,
 } from './landing.templates';
-import { classifyAccess } from './bot-detection';
+import { classifyAccess, isOpenPrefetch } from './bot-detection';
 
 // GIF transparente de 1x1 para o pixel de abertura.
 const PIXEL = Buffer.from(
@@ -53,10 +53,19 @@ export class TrackingService {
     });
   }
 
-  // Injeta o beacon de confirmação: só um navegador real que executa JS conta
-  // como interação humana. Scanners de e-mail fazem GET mas não rodam isto.
+  // Injeta o beacon de confirmação HUMANA. Sandboxes de e-mail (Defender/Safe
+  // Links, Google) renderizam e EXECUTAM JS — então disparar no load não basta.
+  // Só conta quando há INTERAÇÃO real (mouse/scroll/toque) + permanência mínima;
+  // e enviamos sinais (dwell, webdriver) para o servidor filtrar headless.
   private withBeacon(html: string, token: string, type: ConfirmType): string {
-    const script = `<script>try{var b=JSON.stringify({type:'${type}'});if(navigator.sendBeacon){navigator.sendBeacon('/t/confirm/${token}',new Blob([b],{type:'application/json'}));}else{fetch('/t/confirm/${token}',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true});}}catch(e){}</script>`;
+    const script =
+      `<script>(function(){var f=false,t0=Date.now();function go(){if(f)return;if(Date.now()-t0<1200)return;f=true;try{` +
+      `var b=JSON.stringify({type:'${type}',dwell:Date.now()-t0,wd:!!navigator.webdriver});` +
+      `if(navigator.sendBeacon){navigator.sendBeacon('/t/confirm/${token}',new Blob([b],{type:'application/json'}));}` +
+      `else{fetch('/t/confirm/${token}',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true});}` +
+      `}catch(e){}}` +
+      `['mousemove','pointerdown','pointermove','scroll','wheel','keydown','touchstart','click'].forEach(function(e){window.addEventListener(e,go,{passive:true});});` +
+      `})();</script>`;
     return html.includes('</body>')
       ? html.replace('</body>', script + '</body>')
       : html + script;
@@ -85,20 +94,22 @@ export class TrackingService {
   async trackOpen(token: string, meta: ReqMeta): Promise<Buffer> {
     const target = await this.findTarget(token);
     if (target) {
-      // Abertura via pixel é inerentemente ruidosa (proxies) — registra, mas
-      // marca openedAt só se não parecer bot.
+      // Abertura via pixel é inerentemente ruidosa (proxies fazem cache no
+      // recebimento). Filtro mais rígido: qualquer prefetch de cliente/proxy
+      // não marca openedAt.
       const verdict = classifyAccess(meta.userAgent, target.sentAt);
+      const isBot = verdict.isBot || isOpenPrefetch(meta.userAgent);
       await this.prisma.trackingEvent.create({
         data: {
           targetId: target.id,
           type: TrackingEventType.OPENED,
           ip: meta.ip?.slice(0, 64),
           userAgent: meta.userAgent?.slice(0, 300),
-          isBot: verdict.isBot,
-          botReason: verdict.reason ?? null,
+          isBot,
+          botReason: isBot ? (verdict.reason ?? 'prefetch-de-email') : null,
         },
       });
-      if (!verdict.isBot && !target.openedAt) {
+      if (!isBot && !target.openedAt) {
         await this.prisma.campaignTarget.update({
           where: { id: target.id },
           data: { openedAt: new Date() },
@@ -208,11 +219,29 @@ export class TrackingService {
     }
   }
 
-  // Beacon de confirmação humana (chamado por JS da landing).
-  async confirmAccess(token: string, type: ConfirmType, meta: ReqMeta) {
+  // Beacon de confirmação humana (chamado por JS da landing, só após interação).
+  // Sinais do cliente: dwell (ms na página) e wd (navigator.webdriver).
+  async confirmAccess(
+    token: string,
+    type: ConfirmType,
+    meta: ReqMeta,
+    signals: { dwell?: number; wd?: boolean } = {},
+  ) {
     const target = await this.findTarget(token);
     if (!target || !CONFIRM_MAP[type]) return;
-    const verdict = classifyAccess(meta.userAgent, null);
+
+    const uaVerdict = classifyAccess(meta.userAgent, null);
+    let isBot = uaVerdict.isBot;
+    let reason: string | undefined = uaVerdict.reason;
+    if (!isBot && signals.wd === true) {
+      isBot = true;
+      reason = 'webdriver-headless';
+    }
+    if (!isBot && typeof signals.dwell === 'number' && signals.dwell < 1200) {
+      isBot = true;
+      reason = 'permanencia-curta';
+    }
+
     const { field, type: eventType } = CONFIRM_MAP[type];
     await this.prisma.trackingEvent.create({
       data: {
@@ -220,11 +249,11 @@ export class TrackingService {
         type: eventType,
         ip: meta.ip?.slice(0, 64),
         userAgent: meta.userAgent?.slice(0, 300),
-        isBot: verdict.isBot,
-        botReason: verdict.isBot ? verdict.reason : 'confirmado-humano',
+        isBot,
+        botReason: isBot ? reason ?? 'automatico' : 'confirmado-humano',
       },
     });
-    if (!verdict.isBot && !target[field]) {
+    if (!isBot && !target[field]) {
       await this.prisma.campaignTarget.update({
         where: { id: target.id },
         data: { [field]: new Date() },

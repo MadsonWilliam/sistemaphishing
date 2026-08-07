@@ -96,13 +96,18 @@ export class TrackingController {
   @HttpCode(204)
   async confirm(
     @Param('token') token: string,
-    @Body() body: { type?: string },
+    @Body() body: { type?: string; dwell?: number; wd?: boolean },
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
     const type = body?.type;
     if (type === 'click' || type === 'attachment' || type === 'report') {
-      await this.tracking.confirmAccess(token, type, { ip, userAgent: ua });
+      await this.tracking.confirmAccess(
+        token,
+        type,
+        { ip, userAgent: ua },
+        { dwell: body?.dwell, wd: body?.wd },
+      );
     }
   }
 }

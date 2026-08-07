@@ -15,6 +15,17 @@ const HUMAN_HINT = /Mozilla\/5\.0.*(Gecko|AppleWebKit|Trident|Chrome|Safari|Fire
 // pré-fetch/varredura automática, não abertura humana.
 const SUSPICIOUS_WINDOW_MS = 6000;
 
+// Prefetch/cache de imagem por cliente/proxy de e-mail — usado só para ABERTURA
+// (pixel), onde queremos ser mais rígidos (aberturas são inerentemente ruidosas).
+const OPEN_PREFETCH_UA =
+  /(microsoft|ms-office|outlook|office|windows-rss|bingpreview|imageproxy|ggpht|googleimageproxy|yahoo|proxy|prefetch|fetch|superhuman|apple mail|mimecast|proofpoint|barracuda)/i;
+
+export function isOpenPrefetch(userAgent: string | undefined): boolean {
+  const ua = (userAgent ?? '').trim();
+  if (!ua) return true;
+  return OPEN_PREFETCH_UA.test(ua);
+}
+
 export interface BotVerdict {
   isBot: boolean;
   reason?: string;
