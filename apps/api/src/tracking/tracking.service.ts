@@ -98,7 +98,13 @@ export class TrackingService {
       // recebimento). Filtro mais rígido: qualquer prefetch de cliente/proxy
       // não marca openedAt.
       const verdict = classifyAccess(meta.userAgent, target.sentAt);
-      const isBot = verdict.isBot || isOpenPrefetch(meta.userAgent);
+      // Pixel carregado logo após a entrega = prefetch de proxy/scanner, não
+      // leitura humana. Humano abre o e-mail bem depois do envio.
+      const soonAfterSend =
+        !!target.sentAt &&
+        Date.now() - target.sentAt.getTime() < 120_000; // 2 min
+      const isBot =
+        verdict.isBot || isOpenPrefetch(meta.userAgent) || soonAfterSend;
       await this.prisma.trackingEvent.create({
         data: {
           targetId: target.id,
