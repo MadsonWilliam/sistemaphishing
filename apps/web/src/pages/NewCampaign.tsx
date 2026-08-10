@@ -32,6 +32,26 @@ const DIFF_LABEL: Record<number, string> = {
   3: 'difícil de identificar',
 };
 
+const SETORES = [
+  'Financeiro',
+  'Contabilidade',
+  'Jurídico',
+  'RH',
+  'TI',
+  'Administrativo',
+  'Compras',
+  'Logística',
+  'Diretoria',
+  'Comercial',
+  'Operações',
+];
+
+interface Recipient {
+  email: string;
+  name?: string;
+  department?: string;
+}
+
 export function NewCampaign() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -39,13 +59,51 @@ export function NewCampaign() {
     companyId: '',
     templateId: '',
     name: '',
-    recipientsText: '',
     postClickBehavior: 'EDUCATIONAL',
     showReportButton: true,
     microTraining: true,
     dripWindowSeconds: 0,
   });
   const [senderIds, setSenderIds] = useState<string[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [rec, setRec] = useState<Recipient>({
+    email: '',
+    name: '',
+    department: '',
+  });
+  const [bulk, setBulk] = useState('');
+
+  function addRecipient() {
+    const email = rec.email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+    if (recipients.some((r) => r.email === email)) return;
+    setRecipients((prev) => [
+      ...prev,
+      {
+        email,
+        name: rec.name?.trim() || undefined,
+        department: rec.department?.trim() || undefined,
+      },
+    ]);
+    setRec({ email: '', name: '', department: rec.department });
+  }
+
+  function importBulk() {
+    const parsed: Recipient[] = bulk
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [email, name, department] = line.split(',').map((s) => s?.trim());
+        return { email: email?.toLowerCase(), name, department };
+      })
+      .filter((r) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email || ''));
+    setRecipients((prev) => {
+      const seen = new Set(prev.map((r) => r.email));
+      return [...prev, ...parsed.filter((r) => !seen.has(r.email))];
+    });
+    setBulk('');
+  }
 
   const companies = useQuery({
     queryKey: ['companies'],
@@ -71,20 +129,6 @@ export function NewCampaign() {
           })),
         ),
     [domains.data],
-  );
-
-  const recipients = useMemo(
-    () =>
-      f.recipientsText
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [email, name, department] = line.split(',').map((s) => s?.trim());
-          return { email, name: name || undefined, department: department || undefined };
-        })
-        .filter((r) => r.email),
-    [f.recipientsText],
   );
 
   const submit = useMutation({
@@ -166,16 +210,101 @@ export function NewCampaign() {
         <Card className="p-4 space-y-3">
           <div className="text-sm font-medium">2 · Destinatários</div>
           <p className="text-xs text-slate-400">
-            Um por linha: <code>email,nome,setor</code> (nome e setor opcionais).
+            Adicione um por um com o setor — é o que permite o recorte por setor
+            no relatório.
           </p>
-          <textarea
-            value={f.recipientsText}
-            onChange={(e) => setF({ ...f, recipientsText: e.target.value })}
-            rows={7}
-            placeholder={'ana@empresa.com,Ana,Financeiro\nbruno@empresa.com,Bruno,TI'}
-            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm font-mono"
-          />
-          <div className="text-xs text-slate-500">{recipients.length} destinatário(s)</div>
+          {/* Entrada estruturada */}
+          <div className="grid grid-cols-12 gap-2">
+            <input
+              placeholder="email@empresa.com"
+              value={rec.email}
+              onChange={(e) => setRec({ ...rec, email: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && addRecipient()}
+              className="col-span-5 px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+            />
+            <input
+              placeholder="nome"
+              value={rec.name}
+              onChange={(e) => setRec({ ...rec, name: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && addRecipient()}
+              className="col-span-3 px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+            />
+            <input
+              list="setores"
+              placeholder="setor"
+              value={rec.department}
+              onChange={(e) => setRec({ ...rec, department: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && addRecipient()}
+              className="col-span-3 px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+            />
+            <datalist id="setores">
+              {SETORES.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <Btn
+              type="button"
+              onClick={addRecipient}
+              className="col-span-1 !px-0"
+            >
+              +
+            </Btn>
+          </div>
+
+          {/* Lista adicionada */}
+          {recipients.length > 0 && (
+            <div className="max-h-40 overflow-auto rounded-lg border border-slate-800 divide-y divide-slate-800">
+              {recipients.map((r, i) => (
+                <div
+                  key={r.email}
+                  className="flex items-center justify-between px-3 py-1.5 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="text-slate-200">{r.name || r.email}</span>
+                    {r.name && (
+                      <span className="text-slate-500"> · {r.email}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-blue-300">
+                      {r.department || 'sem setor'}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setRecipients((prev) => prev.filter((_, x) => x !== i))
+                      }
+                      className="text-slate-500 hover:text-red-400 text-xs"
+                    >
+                      remover
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="text-xs text-slate-500">
+            {recipients.length} destinatário(s)
+          </div>
+
+          {/* Importação em massa (opcional) */}
+          <details className="text-xs text-slate-400">
+            <summary className="cursor-pointer select-none">
+              Importar em massa (colar lista)
+            </summary>
+            <p className="mt-2">
+              Um por linha: <code>email,nome,setor</code>
+            </p>
+            <textarea
+              value={bulk}
+              onChange={(e) => setBulk(e.target.value)}
+              rows={4}
+              placeholder={'ana@empresa.com,Ana,Financeiro\nbruno@empresa.com,Bruno,TI'}
+              className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm font-mono"
+            />
+            <Btn type="button" variant="ghost" onClick={importBulk}>
+              Importar
+            </Btn>
+          </details>
         </Card>
 
         <Card className="p-4 space-y-3">

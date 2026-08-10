@@ -49,6 +49,27 @@ interface Report {
     deltaPoints?: number;
   };
 }
+interface Target {
+  id: string;
+  toEmail: string;
+  toName?: string | null;
+  department?: string | null;
+  sentAt?: string | null;
+  openedAt?: string | null;
+  clickedAt?: string | null;
+  submittedAt?: string | null;
+  reportedAt?: string | null;
+}
+
+// Situação "mais avançada" da pessoa no funil, para a tabela.
+function situacao(t: Target): { label: string; tone: string } {
+  if (t.reportedAt) return { label: 'Reportou ✓', tone: 'text-emerald-400' };
+  if (t.submittedAt) return { label: 'Submeteu dados', tone: 'text-red-400' };
+  if (t.clickedAt) return { label: 'Clicou', tone: 'text-amber-400' };
+  if (t.openedAt) return { label: 'Abriu', tone: 'text-blue-400' };
+  if (t.sentAt) return { label: 'Enviado', tone: 'text-slate-400' };
+  return { label: 'Pendente', tone: 'text-slate-500' };
+}
 
 function Kpi({
   label,
@@ -96,11 +117,25 @@ export function Dashboard() {
     queryFn: async () => (await api.get<Report>(`/campaigns/${current}/report`)).data,
     enabled: !!current,
   });
+  const targets = useQuery({
+    queryKey: ['targets', current],
+    queryFn: async () =>
+      (await api.get<Target[]>(`/campaigns/${current}/targets`)).data,
+    enabled: !!current,
+  });
 
   const botClicks = useMemo(
     () => stats.data?.automatedFiltered?.CLICKED ?? 0,
     [stats.data],
   );
+
+  // Pessoas filtradas pelo setor selecionado no gráfico (cross-filter).
+  const people = useMemo(() => {
+    const all = targets.data ?? [];
+    return sectorFilter
+      ? all.filter((t) => (t.department ?? '—') === sectorFilter)
+      : all;
+  }, [targets.data, sectorFilter]);
 
   if (campaigns.isLoading)
     return <div className="text-slate-400">Carregando campanhas…</div>;
@@ -264,6 +299,81 @@ export function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Detalhe por pessoa (quem abriu/clicou) — filtra pelo setor clicado */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <div className="text-sm font-medium">
+            Pessoas{' '}
+            {sectorFilter && (
+              <span className="text-slate-400 font-normal">
+                · setor {sectorFilter}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-slate-500">
+            {people.length} pessoa(s)
+            {sectorFilter && (
+              <button
+                onClick={() => setSectorFilter(null)}
+                className="ml-3 text-brand-500 hover:underline"
+              >
+                ver todos
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-slate-400 border-b border-slate-800">
+              <tr>
+                <th className="text-left font-medium px-4 py-2">Pessoa</th>
+                <th className="text-left font-medium px-4 py-2">Setor</th>
+                <th className="text-left font-medium px-4 py-2">Abriu</th>
+                <th className="text-left font-medium px-4 py-2">Clicou</th>
+                <th className="text-left font-medium px-4 py-2">Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((t) => {
+                const s = situacao(t);
+                return (
+                  <tr key={t.id} className="border-b border-slate-800/60">
+                    <td className="px-4 py-2">
+                      <div>{t.toName || '—'}</div>
+                      <div className="text-xs text-slate-500">{t.toEmail}</div>
+                    </td>
+                    <td className="px-4 py-2 text-slate-300">
+                      {t.department || '—'}
+                    </td>
+                    <td className="px-4 py-2">{t.openedAt ? '✅' : '—'}</td>
+                    <td className="px-4 py-2">
+                      {t.clickedAt ? (
+                        <span className="text-amber-400">✅</span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className={`px-4 py-2 font-medium ${s.tone}`}>
+                      {s.label}
+                    </td>
+                  </tr>
+                );
+              })}
+              {people.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-6 text-center text-slate-500"
+                  >
+                    Nenhuma pessoa neste recorte.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
