@@ -20,10 +20,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-brand-500 grid place-items-center">
-                🛡️
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-400 grid place-items-center font-bold text-white">
+                N
               </div>
-              <div className="font-semibold">PhishGuard</div>
+              <div className="font-semibold">NexGuard</div>
             </div>
             <nav className="hidden md:flex items-center gap-1">
               {items.map((n) => (

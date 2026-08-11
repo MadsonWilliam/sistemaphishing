@@ -8,6 +8,7 @@ import { Domains } from './pages/Domains';
 import { Campaigns } from './pages/Campaigns';
 import { NewCampaign } from './pages/NewCampaign';
 import { Allowlist } from './pages/Allowlist';
+import { LandingPage } from './pages/LandingPage';
 import { ReactNode } from 'react';
 
 function Protected({
@@ -31,11 +32,28 @@ function Protected({
   return <Layout>{children}</Layout>;
 }
 
+// Raiz: landing comercial (deslogado) ou dashboard (logado).
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="min-h-screen grid place-items-center text-slate-400">
+        Carregando…
+      </div>
+    );
+  if (!user) return <LandingPage />;
+  return (
+    <Layout>
+      <Dashboard />
+    </Layout>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Protected><Dashboard /></Protected>} />
+      <Route path="/" element={<Home />} />
       <Route path="/campaigns" element={<Protected><Campaigns /></Protected>} />
       <Route path="/campaigns/new" element={<Protected superOnly><NewCampaign /></Protected>} />
       <Route path="/companies" element={<Protected superOnly><Companies /></Protected>} />

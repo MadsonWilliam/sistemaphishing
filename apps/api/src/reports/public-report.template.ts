@@ -105,8 +105,8 @@ export function renderReportPage(d: ReportData): string {
   .logo{width:40px;height:40px;border-radius:10px;background:#2563eb;display:grid;place-items:center;font-size:20px}
 </style></head><body><div class="wrap">
   <div class="brand">
-    <div class="logo">🛡️</div>
-    <div><div style="font-weight:700">PhishGuard</div><div style="font-size:13px;color:#64748b">Relatório de simulação de phishing</div></div>
+    <div class="logo" style="background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff">N</div>
+    <div><div style="font-weight:700">NexGuard</div><div style="font-size:13px;color:#64748b">Relatório de simulação de phishing</div></div>
   </div>
 
   <div class="card">
@@ -136,7 +136,7 @@ export function renderReportPage(d: ReportData): string {
     <div style="font-size:13px;color:#64748b">${esc(d.benchmarkNote)}</div>
   </div>
 
-  <p style="text-align:center;color:#94a3b8;font-size:12px">Simulação autorizada de conscientização · documento confidencial</p>
+  <p style="text-align:center;color:#94a3b8;font-size:12px">Simulação autorizada de conscientização · documento confidencial<br>NexGuard · uma solução Nexium Solutions</p>
 </div></body></html>`;
 }
 
