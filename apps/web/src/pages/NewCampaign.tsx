@@ -63,6 +63,7 @@ export function NewCampaign() {
     showReportButton: true,
     microTraining: true,
     dripWindowSeconds: 0,
+    linkDomain: '',
   });
   const [senderIds, setSenderIds] = useState<string[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -141,6 +142,7 @@ export function NewCampaign() {
         showReportButton: f.showReportButton,
         microTraining: f.microTraining,
         dripWindowSeconds: Number(f.dripWindowSeconds),
+        linkDomain: f.linkDomain.trim() || undefined,
         recipients,
       });
       if (opts.send) {
@@ -335,6 +337,28 @@ export function NewCampaign() {
             value={f.dripWindowSeconds}
             onChange={(e) => setF({ ...f, dripWindowSeconds: Number(e.target.value) })}
           />
+          <label className="block">
+            <span className="block text-xs text-slate-400 mb-1">
+              Domínio dos links (opcional)
+            </span>
+            <input
+              list="linkdomains"
+              placeholder="ex.: link.rsweb.net.br (vazio = domínio da plataforma)"
+              value={f.linkDomain}
+              onChange={(e) => setF({ ...f, linkDomain: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+            />
+            <datalist id="linkdomains">
+              {(domains.data ?? []).map((d) => (
+                <option key={d.id} value={d.domain} />
+              ))}
+            </datalist>
+            <span className="block text-xs text-slate-500 mt-1">
+              Deixa o link crível. O ideal é usar o <strong>mesmo domínio do
+              remetente</strong>. O domínio precisa apontar para a plataforma
+              (adicionar no EasyPanel).
+            </span>
+          </label>
         </Card>
 
         <Card className="p-4 space-y-3">

@@ -269,6 +269,11 @@ model Campaign {
   microTraining      Boolean           @default(false)
   landingRedirectUrl String?
 
+  // Domínio próprio para os links/landing de rastreio (ex.: link.rsweb.net.br).
+  // Deve apontar para esta aplicação (DNS + domínio no serviço). Se nulo, usa
+  // o domínio base da plataforma.
+  linkDomain String?
+
   // Link público de relatório (read-only) para prospects, sem login.
   reportToken String? @unique
 

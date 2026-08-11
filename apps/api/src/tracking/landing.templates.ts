@@ -71,16 +71,13 @@ export function educationalPage(opts: {
 // Formulário falso — apenas para MEDIR a submissão. Os valores NÃO são salvos.
 // Pretexto de "confirmar dados + definir nova senha": não presume que a pessoa
 // lembra a senha atual (o que faria desistir), medindo melhor a suscetibilidade.
-export function fakeFormPage(opts: {
-  token: string;
-  actionBase: string;
-}): string {
+export function fakeFormPage(opts: { token: string }): string {
   return shell(
     'Confirmação de segurança',
     `<div class="logo">🔐</div>
      <h1>Confirme seu acesso</h1>
      <p>Por segurança, confirme seus dados e <strong>defina uma nova senha</strong> de acesso para continuar.</p>
-     <form method="POST" action="${opts.actionBase}/t/f/${opts.token}" autocomplete="off">
+     <form method="POST" action="/t/f/${opts.token}" autocomplete="off">
        <label>E-mail corporativo</label>
        <input type="email" name="email" placeholder="voce@empresa.com" required>
        <label>Nome completo</label>

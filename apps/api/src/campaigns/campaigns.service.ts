@@ -47,6 +47,7 @@ export class CampaignsService {
         showReportButton: dto.showReportButton ?? undefined,
         microTraining: dto.microTraining ?? undefined,
         landingRedirectUrl: dto.landingRedirectUrl ?? null,
+        linkDomain: dto.linkDomain?.trim() || null,
         dripWindowSeconds: dto.dripWindowSeconds ?? undefined,
         dripJitterSeconds: dto.dripJitterSeconds ?? undefined,
         scheduledStartAt: dto.scheduledStartAt
@@ -213,11 +214,24 @@ export class CampaignsService {
       .replace(/{{\s*(empresa|company)\s*}}/gi, company);
   }
 
+  // Normaliza o domínio de link informado (aceita "host" ou "https://host").
+  private linkBase(linkDomain?: string | null): string {
+    if (!linkDomain) return this.config.getOrThrow<string>('APP_BASE_URL');
+    const host = linkDomain.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    return `https://${host}`;
+  }
+
   private buildHtml(
     templateHtml: string,
-    p: { name: string; company: string; token: string; showReport: boolean },
+    p: {
+      name: string;
+      company: string;
+      token: string;
+      showReport: boolean;
+      baseUrl: string;
+    },
   ): string {
-    const baseUrl = this.config.getOrThrow<string>('APP_BASE_URL');
+    const baseUrl = p.baseUrl;
     const link = `${baseUrl}/t/c/${p.token}`;
     const attachment = `${baseUrl}/t/a/${p.token}`;
     let html = templateHtml
@@ -271,6 +285,7 @@ export class CampaignsService {
       throw new BadRequestException('Campanha sem destinatários.');
     }
 
+    const base = this.linkBase(campaign.linkDomain);
     const items: OutboxItem[] = [];
     await Promise.all(
       targets.map((t, idx) => {
@@ -291,6 +306,7 @@ export class CampaignsService {
             company: campaign.company.name,
             token: t.token,
             showReport: campaign.showReportButton,
+            baseUrl: base,
           }),
           campaignId: campaign.id,
           campaignTargetId: t.id,

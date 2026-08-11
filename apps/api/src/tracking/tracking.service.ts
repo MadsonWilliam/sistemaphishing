@@ -220,10 +220,7 @@ export class TrackingService {
         page = blankPage();
         break;
       case PostClickBehavior.FORM:
-        page = fakeFormPage({
-          token,
-          actionBase: this.config.getOrThrow<string>('APP_BASE_URL'),
-        });
+        page = fakeFormPage({ token });
         break;
       case PostClickBehavior.EDUCATIONAL:
       default:

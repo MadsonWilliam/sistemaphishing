@@ -58,6 +58,12 @@ export class CreateCampaignDto {
   @IsUrl({ require_tld: false })
   landingRedirectUrl?: string;
 
+  // Domínio próprio para os links (ex.: link.rsweb.net.br). Deve apontar para
+  // a aplicação. Se vazio, usa o domínio base da plataforma.
+  @IsOptional()
+  @IsString()
+  linkDomain?: string;
+
   // ── Gota-a-gota ──
   @IsOptional()
   @IsInt()
