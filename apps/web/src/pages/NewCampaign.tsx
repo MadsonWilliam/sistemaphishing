@@ -64,6 +64,10 @@ export function NewCampaign() {
     microTraining: true,
     dripWindowSeconds: 0,
     linkDomain: '',
+    brandLogoUrl: '',
+    brandColor: '',
+    trainingUrl: '',
+    recurrence: 'NONE',
   });
   const [senderIds, setSenderIds] = useState<string[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -143,6 +147,10 @@ export function NewCampaign() {
         microTraining: f.microTraining,
         dripWindowSeconds: Number(f.dripWindowSeconds),
         linkDomain: f.linkDomain.trim() || undefined,
+        brandLogoUrl: f.brandLogoUrl.trim() || undefined,
+        brandColor: f.brandColor.trim() || undefined,
+        trainingUrl: f.trainingUrl.trim() || undefined,
+        recurrence: f.recurrence,
         recipients,
       });
       if (opts.send) {
@@ -388,6 +396,66 @@ export function NewCampaign() {
               ))}
             </div>
           )}
+        </Card>
+
+        <Card className="p-4 space-y-3 lg:col-span-2">
+          <div className="text-sm font-medium">5 · Opcionais</div>
+          <div className="grid md:grid-cols-3 gap-3">
+            <label className="block">
+              <span className="block text-xs text-slate-400 mb-1">
+                Logo do cliente (URL) — aparece na landing
+              </span>
+              <input
+                placeholder="https://cliente.com/logo.png"
+                value={f.brandLogoUrl}
+                onChange={(e) => setF({ ...f, brandLogoUrl: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs text-slate-400 mb-1">
+                Cor da marca (landing)
+              </span>
+              <input
+                type="text"
+                placeholder="#1a73e8"
+                value={f.brandColor}
+                onChange={(e) => setF({ ...f, brandColor: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs text-slate-400 mb-1">
+                Recorrência automática
+              </span>
+              <select
+                value={f.recurrence}
+                onChange={(e) => setF({ ...f, recurrence: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+              >
+                <option value="NONE">Não repetir</option>
+                <option value="WEEKLY">Semanal</option>
+                <option value="MONTHLY">Mensal</option>
+                <option value="QUARTERLY">Trimestral</option>
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className="block text-xs text-slate-400 mb-1">
+              Link de treino (mostrado a quem cai) — opcional
+            </span>
+            <input
+              placeholder="https://treino.suaempresa.com/phishing"
+              value={f.trainingUrl}
+              onChange={(e) => setF({ ...f, trainingUrl: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+            />
+          </label>
+          <p className="text-xs text-slate-500">
+            Recorrência repete a campanha (mesmos alvos e config) e mede a
+            evolução sozinha. Iscas com QR: escolha "Formulário falso" acima para
+            contar como "submeteu".
+          </p>
         </Card>
       </div>
 

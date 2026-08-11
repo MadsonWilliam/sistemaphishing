@@ -185,4 +185,43 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
       { label: 'Atualizar pagamento', href: '{{link}}' },
     ),
   },
+  // ── Iscas com QR code (quishing) — o {{qr}} vira o QR do link de clique.
+  // Recomendado usar com comportamento pós-clique "Formulário" (vira "submeteu").
+  {
+    name: 'QR — Benefício disponível (quishing)',
+    sector: 'GERAL',
+    trigger: 'FORM',
+    difficulty: 1,
+    subject: 'Escaneie e resgate seu benefício',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>Você tem um benefício disponível. Escaneie o QR code abaixo com a câmera do celular para resgatar agora.</p>
+       <div style="text-align:center">{{qr}}</div>`,
+    ),
+  },
+  {
+    name: 'QR — Documento seguro (quishing)',
+    sector: 'GERAL',
+    trigger: 'FORM',
+    difficulty: 2,
+    subject: '{{nome}}, documento seguro disponível',
+    html: wrap(
+      `<p>Prezado(a) {{nome}},</p>
+       <p>Um documento seguro da {{empresa}} está disponível. Por segurança, o acesso é feito via QR — escaneie com o celular corporativo para abrir.</p>
+       <div style="text-align:center">{{qr}}</div>`,
+    ),
+  },
+  {
+    name: 'QR — Reautenticação MFA (quishing)',
+    sector: 'TI',
+    trigger: 'FORM',
+    difficulty: 3,
+    subject: 'Ação necessária: reative sua autenticação (MFA)',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>Detectamos uma inconsistência na sua autenticação multifator. Para manter o acesso aos sistemas da {{empresa}}, reative o MFA escaneando o QR abaixo no seu app autenticador.</p>
+       <div style="text-align:center">{{qr}}</div>
+       <p style="font-size:12px;color:#9aa0a6">O não cumprimento em 24h poderá suspender seu acesso.</p>`,
+    ),
+  },
 ];

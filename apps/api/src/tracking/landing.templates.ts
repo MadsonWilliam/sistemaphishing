@@ -1,7 +1,19 @@
 // Páginas renderizadas após o clique. Nenhuma delas coleta credenciais reais:
 // o formulário falso existe só para medir a submissão — os valores são ignorados.
+// Suportam marca do cliente (logo/cor) e um link de treino opcional.
 
-const shell = (title: string, body: string) => `<!doctype html>
+export interface Brand {
+  color?: string | null;
+  logoUrl?: string | null;
+  trainingUrl?: string | null;
+}
+
+const shell = (title: string, body: string, brand?: Brand) => {
+  const color = brand?.color || '#2563eb';
+  const logo = brand?.logoUrl
+    ? `<img src="${brand.logoUrl}" alt="" style="max-height:44px;margin-bottom:18px">`
+    : '';
+  return `<!doctype html>
 <html lang="pt-br"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
@@ -20,12 +32,12 @@ const shell = (title: string, body: string) => `<!doctype html>
   .ok{background:#064e3b;color:#a7f3d0}
   label{display:block;font-size:13px;color:#94a3b8;margin:14px 0 6px}
   input{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:15px}
-  button{margin-top:20px;width:100%;padding:13px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  button,.btn{margin-top:20px;display:inline-block;text-decoration:none;text-align:center;width:100%;padding:13px;border:0;border-radius:10px;background:${color};color:#fff;font-size:15px;font-weight:600;cursor:pointer}
   .muted{font-size:13px;color:#64748b;margin-top:20px}
-  .logo{width:40px;height:40px;border-radius:10px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:16px}
-</style></head><body><div class="card">${body}</div></body></html>`;
+  .logo{width:40px;height:40px;border-radius:10px;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:16px}
+</style></head><body><div class="card">${logo}${body}</div></body></html>`;
+};
 
-// Página em branco (registra o clique, mas não revela nada).
 export function blankPage(): string {
   return shell(
     'Carregando…',
@@ -39,39 +51,44 @@ const tipsList = `
     <li>Passe o mouse sobre os <strong>links</strong> antes de clicar e verifique o endereço.</li>
     <li>Desconfie de <strong>urgência</strong> ("expira hoje", "conta bloqueada").</li>
     <li>Nunca informe <strong>senhas</strong> ou dados por link recebido em e-mail.</li>
+    <li>Desconfie de <strong>QR codes</strong> em e-mails — eles escondem o destino.</li>
     <li>Na dúvida, <strong>reporte ao TI</strong> em vez de clicar.</li>
   </ul>`;
 
 const microTrainingBlock = `
   <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:16px;margin-top:8px">
     <p style="margin:0 0 8px;font-weight:600;color:#e2e8f0">🎓 Treino rápido (30s)</p>
-    <p style="margin:0;font-size:14px">Antes de clicar em qualquer link de e-mail, faça 3 perguntas:
+    <p style="margin:0;font-size:14px">Antes de clicar em qualquer link (ou escanear um QR) de e-mail, faça 3 perguntas:
     <em>Eu esperava isso? O remetente confere? O link leva para onde diz levar?</em>
     Se qualquer resposta for "não", pare e reporte.</p>
   </div>`;
 
-// Página educativa ("você acabou de cair num teste").
+const trainingButton = (brand?: Brand) =>
+  brand?.trainingUrl
+    ? `<a class="btn" href="${brand.trainingUrl}" target="_blank" rel="noopener">Fazer o treinamento completo</a>`
+    : '';
+
 export function educationalPage(opts: {
   microTraining: boolean;
+  brand?: Brand;
 }): string {
   return shell(
     'Simulação de phishing',
     `<div class="badge">⚠️ Isto foi um teste de segurança</div>
-     <h1>Você clicou em um e-mail de phishing simulado</h1>
+     <h1>Você caiu em um phishing simulado</h1>
      <p>Calma — <strong>nenhum dano foi causado</strong> e nenhum dado seu foi coletado.
      Este foi um teste autorizado de conscientização promovido pela sua empresa.</p>
      <p>Se este fosse um ataque real, você poderia ter exposto credenciais ou a rede da empresa.
      Veja como não cair na próxima:</p>
      ${tipsList}
      ${opts.microTraining ? microTrainingBlock : ''}
+     ${trainingButton(opts.brand)}
      <p class="muted">Este teste é confidencial e serve para fortalecer a segurança de todos.</p>`,
+    opts.brand,
   );
 }
 
-// Formulário falso — apenas para MEDIR a submissão. Os valores NÃO são salvos.
-// Pretexto de "confirmar dados + definir nova senha": não presume que a pessoa
-// lembra a senha atual (o que faria desistir), medindo melhor a suscetibilidade.
-export function fakeFormPage(opts: { token: string }): string {
+export function fakeFormPage(opts: { token: string; brand?: Brand }): string {
   return shell(
     'Confirmação de segurança',
     `<div class="logo">🔐</div>
@@ -89,11 +106,11 @@ export function fakeFormPage(opts: { token: string }): string {
        <button type="submit">Confirmar e continuar</button>
      </form>
      <p class="muted">Seus dados são protegidos. Ao continuar você concorda com a política de segurança.</p>`,
+    opts.brand,
   );
 }
 
-// Página exibida quando o usuário REPORTA (comportamento positivo).
-export function reportedPage(): string {
+export function reportedPage(opts?: { brand?: Brand }): string {
   return shell(
     'Obrigado por reportar',
     `<div class="badge ok">✅ Você agiu corretamente</div>
@@ -101,6 +118,8 @@ export function reportedPage(): string {
      <p>Este e-mail fazia parte de um teste de conscientização — e você <strong>não caiu</strong>.
      Reportar mensagens suspeitas é exatamente a atitude certa.</p>
      ${tipsList}
+     ${trainingButton(opts?.brand)}
      <p class="muted">Continue assim: sua atenção protege toda a empresa.</p>`,
+    opts?.brand,
   );
 }

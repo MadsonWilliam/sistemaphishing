@@ -13,6 +13,7 @@ import {
   reportedPage,
 } from './landing.templates';
 import { classifyAccess, isSecurityScanner } from './bot-detection';
+import * as QRCode from 'qrcode';
 
 // GIF transparente de 1x1 para o pixel de abertura.
 const PIXEL = Buffer.from(
@@ -214,20 +215,46 @@ export class TrackingService {
       return { redirectUrl: c.landingRedirectUrl, html: '' };
     }
 
+    const brand = {
+      color: c.brandColor,
+      logoUrl: c.brandLogoUrl,
+      trainingUrl: c.trainingUrl,
+    };
     let page: string;
     switch (c.postClickBehavior) {
       case PostClickBehavior.BLANK:
         page = blankPage();
         break;
       case PostClickBehavior.FORM:
-        page = fakeFormPage({ token });
+        page = fakeFormPage({ token, brand });
         break;
       case PostClickBehavior.EDUCATIONAL:
       default:
-        page = educationalPage({ microTraining: c.microTraining });
+        page = educationalPage({ microTraining: c.microTraining, brand });
         break;
     }
     return { html: this.withBeacon(page, token, confirmType) };
+  }
+
+  // Gera o PNG do QR code que aponta para o link de clique deste alvo (no
+  // domínio próprio da campanha). Scanear no celular = clicar.
+  async qrPng(token: string): Promise<Buffer> {
+    const target = await this.findTarget(token);
+    const fallback = this.config.getOrThrow<string>('APP_BASE_URL');
+    let url = fallback;
+    if (target) {
+      const ld = target.campaign.linkDomain;
+      const base = ld
+        ? `https://${ld.replace(/^https?:\/\//i, '').replace(/\/+$/, '')}`
+        : fallback;
+      url = `${base}/t/c/${token}`;
+    }
+    return QRCode.toBuffer(url, {
+      type: 'png',
+      width: 240,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+    });
   }
 
   // Toque no link-canário (honeypot): marca o alvo como varrido por scanner.
@@ -260,7 +287,13 @@ export class TrackingService {
     const target = await this.findTarget(token);
     if (!target) return blankPage();
     await this.recordRaw(target, TrackingEventType.REPORTED, meta);
-    return this.withBeacon(reportedPage(), token, 'report');
+    const c = target.campaign;
+    const brand = {
+      color: c.brandColor,
+      logoUrl: c.brandLogoUrl,
+      trainingUrl: c.trainingUrl,
+    };
+    return this.withBeacon(reportedPage({ brand }), token, 'report');
   }
 
   // Submissão do formulário falso: POST de formulário = humano. Valores IGNORADOS.
@@ -278,7 +311,15 @@ export class TrackingService {
       },
     });
     await this.applyFunnel(target, 'submitted');
-    return educationalPage({ microTraining: target.campaign.microTraining });
+    const c = target.campaign;
+    return educationalPage({
+      microTraining: c.microTraining,
+      brand: {
+        color: c.brandColor,
+        logoUrl: c.brandLogoUrl,
+        trainingUrl: c.trainingUrl,
+      },
+    });
   }
 
   // Beacon de confirmação humana. Aceita se: UA de navegador, não headless

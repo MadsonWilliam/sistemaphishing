@@ -204,6 +204,13 @@ enum CampaignStatus {
   CANCELED
 }
 
+enum RecurrenceRule {
+  NONE
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
 // Comportamento após o clique — configurável por campanha.
 enum PostClickBehavior {
   BLANK // registra o clique e mostra tela em branco
@@ -273,6 +280,18 @@ model Campaign {
   // Deve apontar para esta aplicação (DNS + domínio no serviço). Se nulo, usa
   // o domínio base da plataforma.
   linkDomain String?
+
+  // Marca do cliente na landing (mais convincente).
+  brandLogoUrl String?
+  brandColor   String?
+  // Trilha de treino opcional (link) mostrada a quem cai.
+  trainingUrl String?
+
+  // Recorrência automática (mede evolução sozinho).
+  recurrence        RecurrenceRule @default(NONE)
+  nextRunAt         DateTime?
+  senderIds         String[] // remetentes p/ auto-envio nas execuções recorrentes
+  recurringParentId String? // campanha-mãe que gerou esta execução
 
   // Link público de relatório (read-only) para prospects, sem login.
   reportToken String? @unique

@@ -15,7 +15,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { PostClickBehavior } from '@prisma/client';
+import { PostClickBehavior, RecurrenceRule } from '@prisma/client';
 
 export class RecipientDto {
   @IsEmail()
@@ -63,6 +63,25 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   linkDomain?: string;
+
+  // Marca do cliente na landing.
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  brandLogoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  brandColor?: string;
+
+  // Trilha de treino opcional (link mostrado a quem cai).
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  trainingUrl?: string;
+
+  // Recorrência automática.
+  @IsOptional()
+  @IsEnum(RecurrenceRule)
+  recurrence?: RecurrenceRule;
 
   // ── Gota-a-gota ──
   @IsOptional()

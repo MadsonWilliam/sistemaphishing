@@ -1,10 +1,13 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CampaignStatus } from '@prisma/client';
+import { CampaignStatus, Prisma, RecurrenceRule } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutboxService, OutboxItem } from '../outbox/outbox.service';
@@ -19,12 +22,30 @@ function escapeHtml(s: string): string {
 }
 
 @Injectable()
-export class CampaignsService {
+export class CampaignsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(CampaignsService.name);
+  private recTimer: NodeJS.Timeout | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly config: ConfigService,
   ) {}
+
+  onModuleInit() {
+    // Verifica campanhas recorrentes a cada 5 minutos.
+    this.recTimer = setInterval(
+      () =>
+        this.runRecurring().catch((e) =>
+          this.logger.error('Falha no ciclo de recorrência', e),
+        ),
+      5 * 60 * 1000,
+    );
+  }
+
+  onModuleDestroy() {
+    if (this.recTimer) clearInterval(this.recTimer);
+  }
 
   private token(): string {
     return randomBytes(24).toString('hex');
@@ -48,6 +69,10 @@ export class CampaignsService {
         microTraining: dto.microTraining ?? undefined,
         landingRedirectUrl: dto.landingRedirectUrl ?? null,
         linkDomain: dto.linkDomain?.trim() || null,
+        brandLogoUrl: dto.brandLogoUrl?.trim() || null,
+        brandColor: dto.brandColor?.trim() || null,
+        trainingUrl: dto.trainingUrl?.trim() || null,
+        recurrence: dto.recurrence ?? undefined,
         dripWindowSeconds: dto.dripWindowSeconds ?? undefined,
         dripJitterSeconds: dto.dripJitterSeconds ?? undefined,
         scheduledStartAt: dto.scheduledStartAt
@@ -234,11 +259,13 @@ export class CampaignsService {
     const baseUrl = p.baseUrl;
     const link = `${baseUrl}/t/c/${p.token}`;
     const attachment = `${baseUrl}/t/a/${p.token}`;
+    const qrImg = `<img src="${baseUrl}/t/q/${p.token}.png" width="200" height="200" alt="Escaneie para acessar" style="display:block;margin:8px 0">`;
     let html = templateHtml
       .replace(/{{\s*(nome|name)\s*}}/gi, escapeHtml(p.name))
       .replace(/{{\s*(empresa|company)\s*}}/gi, escapeHtml(p.company))
       .replace(/{{\s*link\s*}}/gi, link)
-      .replace(/{{\s*(anexo|attachment)\s*}}/gi, attachment);
+      .replace(/{{\s*(anexo|attachment)\s*}}/gi, attachment)
+      .replace(/{{\s*qr\s*}}/gi, qrImg);
 
     // Link-canário (honeypot): invisível ao humano, mas scanners que varrem
     // todos os links o buscam — delatando a varredura automática.
@@ -326,12 +353,88 @@ export class CampaignsService {
       jitterSeconds: campaign.dripJitterSeconds,
     });
 
+    const recurring =
+      campaign.recurrence && campaign.recurrence !== RecurrenceRule.NONE;
     await this.prisma.campaign.update({
       where: { id },
-      data: { status: CampaignStatus.SENDING, scheduledStartAt: startAt },
+      data: {
+        status: CampaignStatus.SENDING,
+        scheduledStartAt: startAt,
+        ...(recurring
+          ? {
+              nextRunAt: this.addInterval(new Date(), campaign.recurrence),
+              senderIds: dto.senderIdentityIds,
+            }
+          : {}),
+      },
     });
 
     return { enqueued: result.enqueued, status: CampaignStatus.SENDING };
+  }
+
+  private addInterval(from: Date, rule: RecurrenceRule): Date {
+    const d = new Date(from);
+    if (rule === RecurrenceRule.WEEKLY) d.setDate(d.getDate() + 7);
+    else if (rule === RecurrenceRule.MONTHLY) d.setMonth(d.getMonth() + 1);
+    else if (rule === RecurrenceRule.QUARTERLY) d.setMonth(d.getMonth() + 3);
+    return d;
+  }
+
+  // Executa campanhas recorrentes vencidas: clona (novos alvos/tokens) e dispara.
+  async runRecurring(): Promise<void> {
+    const due = await this.prisma.campaign.findMany({
+      where: {
+        recurrence: { not: RecurrenceRule.NONE },
+        nextRunAt: { lte: new Date() },
+        status: { in: [CampaignStatus.SENDING, CampaignStatus.SENT] },
+      },
+      include: { targets: true },
+    });
+    for (const parent of due) {
+      try {
+        await this.cloneAndSend(parent);
+        await this.prisma.campaign.update({
+          where: { id: parent.id },
+          data: { nextRunAt: this.addInterval(new Date(), parent.recurrence) },
+        });
+      } catch (e) {
+        this.logger?.error?.('Falha em campanha recorrente', e as Error);
+      }
+    }
+  }
+
+  private async cloneAndSend(
+    parent: Prisma.CampaignGetPayload<{ include: { targets: true } }>,
+  ) {
+    if (!parent.senderIds?.length || !parent.targets.length) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    const child = await this.prisma.campaign.create({
+      data: {
+        companyId: parent.companyId,
+        name: `${parent.name} · ${stamp}`,
+        templateId: parent.templateId,
+        postClickBehavior: parent.postClickBehavior,
+        showReportButton: parent.showReportButton,
+        microTraining: parent.microTraining,
+        landingRedirectUrl: parent.landingRedirectUrl,
+        linkDomain: parent.linkDomain,
+        brandLogoUrl: parent.brandLogoUrl,
+        brandColor: parent.brandColor,
+        trainingUrl: parent.trainingUrl,
+        dripWindowSeconds: parent.dripWindowSeconds,
+        dripJitterSeconds: parent.dripJitterSeconds,
+        recurringParentId: parent.id,
+        targets: {
+          create: parent.targets.map((t) => ({
+            token: this.token(),
+            toEmail: t.toEmail,
+            toName: t.toName,
+            department: t.department,
+          })),
+        },
+      },
+    });
+    await this.send(child.id, { senderIdentityIds: parent.senderIds });
   }
 
   // Gera (ou reaproveita) o token do relatório público read-only.

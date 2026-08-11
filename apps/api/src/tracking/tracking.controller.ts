@@ -54,6 +54,21 @@ export class TrackingController {
     res.set('Content-Type', 'text/html; charset=utf-8').send(out.html);
   }
 
+  // QR code do link de clique (isca de "quishing"). /t/q/:token.png
+  @Get('q/:token')
+  async qr(
+    @Param('token') token: string,
+    @Res() res: Response,
+  ) {
+    const cleaned = token.replace(/\.png$/i, '');
+    const png = await this.tracking.qrPng(cleaned);
+    res.set({
+      'Content-Type': 'image/png',
+      'Cache-Control': 'no-store',
+    });
+    res.end(png);
+  }
+
   // Link-canário (honeypot): só scanners buscam este link oculto.
   @Get('x/:token')
   async canary(
