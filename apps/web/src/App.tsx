@@ -7,6 +7,7 @@ import { Companies } from './pages/Companies';
 import { Domains } from './pages/Domains';
 import { Campaigns } from './pages/Campaigns';
 import { NewCampaign } from './pages/NewCampaign';
+import { Allowlist } from './pages/Allowlist';
 import { ReactNode } from 'react';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/campaigns/new" element={<Protected><NewCampaign /></Protected>} />
       <Route path="/companies" element={<Protected><Companies /></Protected>} />
       <Route path="/domains" element={<Protected><Domains /></Protected>} />
+      <Route path="/allowlist" element={<Protected><Allowlist /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

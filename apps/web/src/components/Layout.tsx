@@ -7,6 +7,7 @@ const nav = [
   { to: '/campaigns', label: 'Campanhas' },
   { to: '/companies', label: 'Empresas' },
   { to: '/domains', label: 'Domínios' },
+  { to: '/allowlist', label: 'Allowlist' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
