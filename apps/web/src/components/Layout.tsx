@@ -5,13 +5,15 @@ import { useAuth } from '../lib/auth';
 const nav = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/campaigns', label: 'Campanhas' },
-  { to: '/companies', label: 'Empresas' },
-  { to: '/domains', label: 'Domínios' },
-  { to: '/allowlist', label: 'Allowlist' },
+  { to: '/companies', label: 'Empresas', superOnly: true },
+  { to: '/domains', label: 'Domínios', superOnly: true },
+  { to: '/allowlist', label: 'Allowlist', superOnly: true },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const isSuper = user?.role === 'SUPER_ADMIN';
+  const items = nav.filter((n) => isSuper || !n.superOnly);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
@@ -24,7 +26,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="font-semibold">PhishGuard</div>
             </div>
             <nav className="hidden md:flex items-center gap-1">
-              {nav.map((n) => (
+              {items.map((n) => (
                 <NavLink
                   key={n.to}
                   to={n.to}

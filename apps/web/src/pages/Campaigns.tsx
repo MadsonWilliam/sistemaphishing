@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Badge, Btn, Card, PageHeader } from '../components/ui';
 
 interface Campaign {
@@ -68,6 +69,8 @@ function DeleteButton({ id }: { id: string }) {
 }
 
 export function Campaigns() {
+  const { user } = useAuth();
+  const isSuper = user?.role === 'SUPER_ADMIN';
   const campaigns = useQuery({
     queryKey: ['campaigns'],
     queryFn: async () => (await api.get<Campaign[]>('/campaigns')).data,
@@ -79,9 +82,11 @@ export function Campaigns() {
         title="Campanhas"
         subtitle="Simulações disparadas e seus resultados."
         action={
-          <Link to="/campaigns/new">
-            <Btn>+ Nova campanha</Btn>
-          </Link>
+          isSuper ? (
+            <Link to="/campaigns/new">
+              <Btn>+ Nova campanha</Btn>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -119,8 +124,8 @@ export function Campaigns() {
                     <Link to="/">
                       <Btn variant="ghost">Dashboard</Btn>
                     </Link>
-                    <ShareButton id={c.id} />
-                    <DeleteButton id={c.id} />
+                    {isSuper && <ShareButton id={c.id} />}
+                    {isSuper && <DeleteButton id={c.id} />}
                   </div>
                 </td>
               </tr>

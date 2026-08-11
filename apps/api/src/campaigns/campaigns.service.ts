@@ -91,8 +91,10 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  findAll() {
+  // scopeCompanyId: quando presente (admin do cliente), limita à empresa dele.
+  findAll(scopeCompanyId?: string) {
     return this.prisma.campaign.findMany({
+      where: scopeCompanyId ? { companyId: scopeCompanyId } : {},
       orderBy: { createdAt: 'desc' },
       include: {
         template: { select: { name: true, sector: true } },
@@ -102,7 +104,7 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, scopeCompanyId?: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
       include: {
@@ -110,13 +112,15 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
         company: { select: { id: true, name: true } },
       },
     });
-    if (!campaign) throw new NotFoundException('Campanha não encontrada.');
+    if (!campaign || (scopeCompanyId && campaign.companyId !== scopeCompanyId)) {
+      throw new NotFoundException('Campanha não encontrada.');
+    }
     return campaign;
   }
 
   // Alvos com status por destinatário (visão operacional/QA).
-  async listTargets(id: string) {
-    await this.findOne(id);
+  async listTargets(id: string, scopeCompanyId?: string) {
+    await this.findOne(id, scopeCompanyId);
     return this.prisma.campaignTarget.findMany({
       where: { campaignId: id },
       orderBy: { createdAt: 'asc' },
@@ -137,8 +141,8 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Auditoria de eventos brutos (ver UA/bot de cada acesso) — transparência.
-  async listEvents(id: string) {
-    await this.findOne(id);
+  async listEvents(id: string, scopeCompanyId?: string) {
+    await this.findOne(id, scopeCompanyId);
     return this.prisma.trackingEvent.findMany({
       where: { target: { campaignId: id } },
       orderBy: { createdAt: 'desc' },
@@ -156,8 +160,8 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Funil de conversão + recorte por setor (base da dashboard/relatório).
-  async getStats(id: string) {
-    await this.findOne(id);
+  async getStats(id: string, scopeCompanyId?: string) {
+    await this.findOne(id, scopeCompanyId);
     const base = { campaignId: id };
     const [total, sent, opened, clicked, submitted, reported] =
       await Promise.all([

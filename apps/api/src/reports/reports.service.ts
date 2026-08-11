@@ -82,9 +82,9 @@ export class ReportsService {
     return this.buildReport(c.id);
   }
 
-  async buildReport(campaignId: string) {
-    const campaign = await this.campaigns.findOne(campaignId);
-    const stats = await this.campaigns.getStats(campaignId);
+  async buildReport(campaignId: string, scopeCompanyId?: string) {
+    const campaign = await this.campaigns.findOne(campaignId, scopeCompanyId);
+    const stats = await this.campaigns.getStats(campaignId, scopeCompanyId);
     const { funnel, rates, byDepartment } = stats;
     const recs: Recommendation[] = [];
 

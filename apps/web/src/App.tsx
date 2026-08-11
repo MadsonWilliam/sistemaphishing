@@ -10,7 +10,13 @@ import { NewCampaign } from './pages/NewCampaign';
 import { Allowlist } from './pages/Allowlist';
 import { ReactNode } from 'react';
 
-function Protected({ children }: { children: ReactNode }) {
+function Protected({
+  children,
+  superOnly,
+}: {
+  children: ReactNode;
+  superOnly?: boolean;
+}) {
   const { user, loading } = useAuth();
   if (loading)
     return (
@@ -19,6 +25,9 @@ function Protected({ children }: { children: ReactNode }) {
       </div>
     );
   if (!user) return <Navigate to="/login" replace />;
+  // Telas de operação: só o operador (SUPER_ADMIN). Cliente vai pro dashboard.
+  if (superOnly && user.role !== 'SUPER_ADMIN')
+    return <Navigate to="/" replace />;
   return <Layout>{children}</Layout>;
 }
 
@@ -28,10 +37,10 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Protected><Dashboard /></Protected>} />
       <Route path="/campaigns" element={<Protected><Campaigns /></Protected>} />
-      <Route path="/campaigns/new" element={<Protected><NewCampaign /></Protected>} />
-      <Route path="/companies" element={<Protected><Companies /></Protected>} />
-      <Route path="/domains" element={<Protected><Domains /></Protected>} />
-      <Route path="/allowlist" element={<Protected><Allowlist /></Protected>} />
+      <Route path="/campaigns/new" element={<Protected superOnly><NewCampaign /></Protected>} />
+      <Route path="/companies" element={<Protected superOnly><Companies /></Protected>} />
+      <Route path="/domains" element={<Protected superOnly><Domains /></Protected>} />
+      <Route path="/allowlist" element={<Protected superOnly><Allowlist /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
