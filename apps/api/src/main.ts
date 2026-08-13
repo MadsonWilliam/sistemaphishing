@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { json, urlencoded } from 'express';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -21,6 +22,9 @@ async function bootstrap() {
   // Limite de payload (anti-DoS por corpo gigante).
   app.use(json({ limit: '2mb' }));
   app.use(urlencoded({ extended: false, limit: '2mb' }));
+
+  // Cookies httpOnly de sessão (access/refresh) — ver auth.controller.
+  app.use(cookieParser());
 
   // Rastreio (/t/...) e relatório público (/r/...) ficam na raiz, fora de /api.
   app.setGlobalPrefix('api', {

@@ -5,7 +5,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
-import { api, getToken, setTokens, clearTokens } from './api';
+import { api } from './api';
 
 interface AuthUser {
   id: string;
@@ -28,28 +28,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
-      return;
-    }
+    // O cookie httpOnly (se existir) vai junto; /auth/me confirma a sessão.
     api
       .get<AuthUser>('/auth/me')
       .then((r) => setUser(r.data))
-      .catch(() => clearTokens())
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   async function login(email: string, password: string) {
-    const { data } = await api.post('/auth/login', { email, password });
-    setTokens(data.accessToken, data.refreshToken);
+    await api.post('/auth/login', { email, password });
     const me = await api.get<AuthUser>('/auth/me');
     setUser(me.data);
   }
 
   function logout() {
-    clearTokens();
-    setUser(null);
-    location.assign('/login');
+    // Revoga o refresh no servidor e limpa os cookies; depois desloga a UI.
+    api
+      .post('/auth/logout')
+      .catch(() => undefined)
+      .finally(() => {
+        setUser(null);
+        location.assign('/login');
+      });
   }
 
   return (

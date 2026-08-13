@@ -2,8 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
+import { ACCESS_COOKIE } from '../auth.cookies';
 
 export interface JwtPayload {
   sub: string;
@@ -12,6 +14,10 @@ export interface JwtPayload {
   companyId: string | null;
 }
 
+// Lê o access token do cookie httpOnly (JS não acessa → mitiga roubo via XSS).
+const fromCookie = (req: Request): string | null =>
+  (req?.cookies?.[ACCESS_COOKIE] as string | undefined) ?? null;
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -19,7 +25,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Cookie primeiro; header Bearer como fallback (compatibilidade/tooling).
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        fromCookie,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
     });

@@ -28,6 +28,14 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
+  // TTLs para o controller montar o maxAge dos cookies.
+  get ttls(): { accessTtl: number; refreshTtl: number } {
+    return {
+      accessTtl: this.config.getOrThrow<number>('JWT_ACCESS_TTL'),
+      refreshTtl: this.config.getOrThrow<number>('JWT_REFRESH_TTL'),
+    };
+  }
+
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
@@ -84,12 +92,22 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (
-      !stored ||
-      stored.revokedAt ||
-      stored.expiresAt < new Date() ||
-      !stored.user.isActive
-    ) {
+    if (!stored) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado.');
+    }
+
+    // Detecção de reuso: um refresh JÁ revogado sendo reapresentado indica que
+    // o token vazou (o legítimo já foi rotacionado). Revoga toda a sessão do
+    // usuário por precaução — invalida tanto o atacante quanto o titular.
+    if (stored.revokedAt) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: stored.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException('Sessão revogada por segurança.');
+    }
+
+    if (stored.expiresAt < new Date() || !stored.user.isActive) {
       throw new UnauthorizedException('Refresh token inválido ou expirado.');
     }
 

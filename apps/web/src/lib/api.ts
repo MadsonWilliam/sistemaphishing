@@ -1,52 +1,20 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-// Mesma origem em produção; em dev o Vite faz proxy de /api.
-export const api = axios.create({ baseURL: '/api' });
+// Sessão via cookie httpOnly (o navegador envia/recebe sozinho quando
+// withCredentials=true). O JS da página NÃO tem acesso aos tokens → mesmo um
+// XSS não consegue roubá-los. Mesma origem em produção; em dev o Vite faz proxy.
+export const api = axios.create({ baseURL: '/api', withCredentials: true });
 
-const ACCESS_KEY = 'phish_access_token';
-const REFRESH_KEY = 'phish_refresh_token';
+// Renova o access token (cookie) via /auth/refresh quando expira.
+// Compartilha uma única chamada entre requests concorrentes.
+let refreshing: Promise<boolean> | null = null;
 
-export const getToken = () => localStorage.getItem(ACCESS_KEY);
-export const getRefresh = () => localStorage.getItem(REFRESH_KEY);
-
-export function setTokens(access: string | null, refresh?: string | null) {
-  if (access) localStorage.setItem(ACCESS_KEY, access);
-  else localStorage.removeItem(ACCESS_KEY);
-  if (refresh !== undefined) {
-    if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
-    else localStorage.removeItem(REFRESH_KEY);
-  }
-}
-
-export function clearTokens() {
-  localStorage.removeItem(ACCESS_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-}
-
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// Renova o access token via refresh token quando expira (1 tentativa por request).
-// Compartilha uma única chamada de refresh entre requests concorrentes.
-let refreshing: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
-  const refresh = getRefresh();
-  if (!refresh) return null;
+async function tryRefresh(): Promise<boolean> {
   if (!refreshing) {
     refreshing = axios
-      .post('/api/auth/refresh', { refreshToken: refresh })
-      .then((r) => {
-        setTokens(r.data.accessToken, r.data.refreshToken);
-        return r.data.accessToken as string;
-      })
-      .catch(() => {
-        clearTokens();
-        return null;
-      })
+      .post('/api/auth/refresh', {}, { withCredentials: true })
+      .then(() => true)
+      .catch(() => false)
       .finally(() => {
         refreshing = null;
       });
@@ -60,14 +28,16 @@ api.interceptors.response.use(
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
-    const isAuthCall = original?.url?.includes('/auth/');
-    if (error.response?.status === 401 && !original._retry && !isAuthCall) {
+    const url = original?.url || '';
+    // Não tenta renovar em cima do próprio fluxo de auth (evita loop).
+    const isRefreshFlow =
+      url.includes('/auth/refresh') ||
+      url.includes('/auth/login') ||
+      url.includes('/auth/logout');
+    if (error.response?.status === 401 && !original._retry && !isRefreshFlow) {
       original._retry = true;
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        original.headers.Authorization = `Bearer ${newToken}`;
-        return api(original);
-      }
+      const ok = await tryRefresh();
+      if (ok) return api(original);
       if (location.pathname !== '/login') location.assign('/login');
     }
     return Promise.reject(error);
