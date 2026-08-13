@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { validateEnv } from './config/env.validation';
@@ -26,6 +27,9 @@ import { RolesGuard } from './common/guards/roles.guard';
       isGlobal: true,
       validate: validateEnv,
     }),
+    // Rate limiting global: 120 req/min por IP (endpoints sensíveis têm limites
+    // menores; rotas públicas de rastreio são isentas).
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     // Serve o SPA (React) na mesma origem, exceto /api e /t (controllers).
     // Só registra se o build do front existir (em dev usamos o Vite separado).
     ...(existsSync(join(__dirname, '..', '..', 'web', 'dist'))
@@ -50,6 +54,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     HealthModule,
   ],
   providers: [
+    // Rate limiting primeiro (barra abuso antes mesmo da autenticação).
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     // Autenticação exigida por padrão em toda a API (rotas @Public são exceção).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // RBAC por papel, aplicado após a autenticação.

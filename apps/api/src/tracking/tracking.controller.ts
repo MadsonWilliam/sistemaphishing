@@ -11,11 +11,14 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 import { TrackingService } from './tracking.service';
 import { Public } from '../common/decorators/public.decorator';
 
 // Rotas públicas de rastreio (fora do prefixo /api — ver main.ts).
-// Tokens são opacos; nenhum dado sensível é exposto.
+// Tokens são opacos; nenhum dado sensível é exposto. Isentas de rate limit
+// pois IPs corporativos compartilhados (NAT) atendem muitos funcionários.
+@SkipThrottle()
 @Public()
 @Controller('t')
 export class TrackingController {

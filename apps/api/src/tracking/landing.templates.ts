@@ -8,10 +8,20 @@ export interface Brand {
   trainingUrl?: string | null;
 }
 
+// Sanitização defensiva: cor só entra na CSS se for um valor de cor seguro;
+// logo só se for URL http(s) — evita injeção via atributo/estilo.
+const safeColor = (c?: string | null): string =>
+  c && /^(#[0-9a-fA-F]{3,8}|rgb\([\d\s,.%]+\)|rgba\([\d\s,.%]+\)|[a-zA-Z]{3,20})$/.test(c.trim())
+    ? c.trim()
+    : '#2563eb';
+const safeUrl = (u?: string | null): string | null =>
+  u && /^https?:\/\/[^\s"'<>]+$/i.test(u.trim()) ? u.trim() : null;
+
 const shell = (title: string, body: string, brand?: Brand) => {
-  const color = brand?.color || '#2563eb';
-  const logo = brand?.logoUrl
-    ? `<img src="${brand.logoUrl}" alt="" style="max-height:44px;margin-bottom:18px">`
+  const color = safeColor(brand?.color);
+  const logoUrl = safeUrl(brand?.logoUrl);
+  const logo = logoUrl
+    ? `<img src="${logoUrl}" alt="" style="max-height:44px;margin-bottom:18px">`
     : '';
   return `<!doctype html>
 <html lang="pt-br"><head><meta charset="utf-8">
@@ -63,10 +73,12 @@ const microTrainingBlock = `
     Se qualquer resposta for "não", pare e reporte.</p>
   </div>`;
 
-const trainingButton = (brand?: Brand) =>
-  brand?.trainingUrl
-    ? `<a class="btn" href="${brand.trainingUrl}" target="_blank" rel="noopener">Fazer o treinamento completo</a>`
+const trainingButton = (brand?: Brand) => {
+  const url = safeUrl(brand?.trainingUrl);
+  return url
+    ? `<a class="btn" href="${url}" target="_blank" rel="noopener">Fazer o treinamento completo</a>`
     : '';
+};
 
 export function educationalPage(opts: {
   microTraining: boolean;

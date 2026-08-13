@@ -1,4 +1,5 @@
 import { Controller, Get, Header, Param } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ReportsService } from './reports.service';
 import { Public } from '../common/decorators/public.decorator';
 import {
@@ -8,6 +9,7 @@ import {
 
 // Relatório público read-only (fora do prefixo /api — ver main.ts). Sem login:
 // serve para enviar a pré-análise ao prospect. Token pode ser revogado.
+@SkipThrottle()
 @Public()
 @Controller('r')
 export class PublicReportController {
