@@ -29,8 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // O cookie httpOnly (se existir) vai junto; /auth/me confirma a sessão.
+    // _silent: um 401 aqui (visitante deslogado) NÃO deve redirecionar para
+    // /login — deixa a landing pública aparecer. Tenta refresh mesmo assim,
+    // para logar de volta quem tem refresh válido e access expirado.
     api
-      .get<AuthUser>('/auth/me')
+      .get<AuthUser>('/auth/me', { _silent: true } as never)
       .then((r) => setUser(r.data))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));

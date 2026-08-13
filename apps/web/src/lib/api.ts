@@ -27,6 +27,7 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
+      _silent?: boolean;
     };
     const url = original?.url || '';
     // Não tenta renovar em cima do próprio fluxo de auth (evita loop).
@@ -38,7 +39,12 @@ api.interceptors.response.use(
       original._retry = true;
       const ok = await tryRefresh();
       if (ok) return api(original);
-      if (location.pathname !== '/login') location.assign('/login');
+      // Redirect só quando NÃO é o probe silencioso de inicialização — assim a
+      // landing pública não empurra visitante deslogado para /login. O roteamento
+      // (Home/Protected) é quem decide o que mostrar quando não há sessão.
+      if (!original._silent && location.pathname !== '/login') {
+        location.assign('/login');
+      }
     }
     return Promise.reject(error);
   },
