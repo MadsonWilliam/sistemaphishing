@@ -29,6 +29,7 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
         phone: f.get('phone') || undefined,
         employees: f.get('employees') || undefined,
         message: f.get('message') || undefined,
+        consent: f.get('consent') === 'on',
         website: f.get('website') || undefined, // honeypot
       });
       setStatus('ok');
@@ -137,6 +138,27 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
+              <label className="flex items-start gap-2 text-xs text-slate-400 leading-relaxed">
+                <input
+                  type="checkbox"
+                  name="consent"
+                  required
+                  className="mt-0.5 accent-brand-500 w-4 h-4 shrink-0"
+                />
+                <span>
+                  Li e concordo com os{' '}
+                  <a
+                    href="/termos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-400 hover:underline"
+                  >
+                    Termos e a Política de Privacidade
+                  </a>
+                  , e autorizo o contato da Nexium sobre esta solicitação.
+                </span>
+              </label>
+
               {status === 'error' && (
                 <p className="text-sm text-red-400">{error}</p>
               )}
@@ -148,9 +170,6 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
               >
                 {status === 'sending' ? 'Enviando…' : 'Enviar solicitação'}
               </button>
-              <p className="text-[11px] text-slate-500 text-center">
-                Seus dados são usados apenas para este contato comercial.
-              </p>
             </form>
           </>
         )}

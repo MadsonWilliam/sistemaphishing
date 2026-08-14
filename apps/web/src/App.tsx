@@ -10,6 +10,7 @@ import { NewCampaign } from './pages/NewCampaign';
 import { Allowlist } from './pages/Allowlist';
 import { Leads } from './pages/Leads';
 import { LandingPage } from './pages/LandingPage';
+import { Termos } from './pages/Termos';
 import { ReactNode } from 'react';
 
 function Protected({
@@ -54,6 +55,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/termos" element={<Termos />} />
       <Route path="/" element={<Home />} />
       <Route path="/campaigns" element={<Protected><Campaigns /></Protected>} />
       <Route path="/campaigns/new" element={<Protected superOnly><NewCampaign /></Protected>} />

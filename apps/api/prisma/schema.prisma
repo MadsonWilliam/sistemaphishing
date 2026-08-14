@@ -398,6 +398,8 @@ model Lead {
   // Mini-CRM manual: o operador avança o estágio e anota o acompanhamento.
   stage     LeadStage @default(NOVO)
   notes     String?
+  // Consentimento LGPD dado no formulário (marca o aceite dos termos).
+  consentAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

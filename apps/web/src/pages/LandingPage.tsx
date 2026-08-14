@@ -263,10 +263,16 @@ export function LandingPage() {
         <footer className="border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
             <Logo />
-            <div>
-              NexGuard · uma solução{' '}
-              <span className="text-slate-300">Nexium Solutions</span> ·{' '}
-              {new Date().getFullYear()}
+            <div className="flex items-center gap-3">
+              <span>
+                NexGuard · uma solução{' '}
+                <span className="text-slate-300">Nexium Solutions</span> ·{' '}
+                {new Date().getFullYear()}
+              </span>
+              <span className="text-slate-700">·</span>
+              <Link to="/termos" className="hover:text-slate-300">
+                Termos e Privacidade
+              </Link>
             </div>
           </div>
         </footer>

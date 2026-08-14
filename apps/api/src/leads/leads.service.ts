@@ -41,6 +41,8 @@ export class LeadsService {
         phone: dto.phone?.trim() || null,
         employees: dto.employees?.trim() || null,
         message: dto.message?.trim() || null,
+        // Registra o momento do aceite dos termos (prova de consentimento LGPD).
+        consentAt: new Date(),
       },
     });
 

@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -39,6 +40,10 @@ export class CreateLeadDto {
   @IsString()
   @MaxLength(1500)
   message?: string;
+
+  // Consentimento LGPD obrigatório: precisa vir true (checkbox marcado).
+  @Equals(true, { message: 'É necessário aceitar os termos para continuar.' })
+  consent!: boolean;
 
   // Honeypot anti-bot: campo oculto no form. Se vier preenchido, é robô.
   @IsOptional()
