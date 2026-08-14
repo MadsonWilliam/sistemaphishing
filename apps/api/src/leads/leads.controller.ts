@@ -1,0 +1,28 @@
+import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { Role } from '@prisma/client';
+import { LeadsService } from './leads.service';
+import { CreateLeadDto } from './dto/lead.dto';
+import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+
+@Controller('leads')
+export class LeadsController {
+  constructor(private readonly leads: LeadsService) {}
+
+  // Formulário público da landing. Anti-spam: no máx. 5 envios/min por IP.
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post()
+  @HttpCode(201)
+  create(@Body() dto: CreateLeadDto) {
+    return this.leads.create(dto);
+  }
+
+  // Só o operador vê os leads recebidos.
+  @Roles(Role.SUPER_ADMIN)
+  @Get()
+  list() {
+    return this.leads.list();
+  }
+}

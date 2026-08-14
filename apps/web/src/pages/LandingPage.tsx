@@ -1,7 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const CONTACT =
-  'mailto:dev.projetos@rstechsolutions.com.br?subject=Quero%20uma%20demonstra%C3%A7%C3%A3o%20do%20NexGuard';
+import { ContactModal } from '../components/ContactModal';
 
 function Logo() {
   return (
@@ -33,6 +32,9 @@ function Feature({
 }
 
 export function LandingPage() {
+  const [contactOpen, setContactOpen] = useState(false);
+  const openContact = () => setContactOpen(true);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
       {/* glow de fundo */}
@@ -46,12 +48,12 @@ export function LandingPage() {
         <header className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
-            <a
-              href={CONTACT}
+            <button
+              onClick={openContact}
               className="hidden sm:inline text-sm text-slate-300 hover:text-white px-4 py-2"
             >
               Falar com a Nexium
-            </a>
+            </button>
             <Link
               to="/login"
               className="text-sm font-medium px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 transition"
@@ -74,17 +76,17 @@ export function LandingPage() {
               </span>
             </h1>
             <p className="text-lg text-slate-400 mt-6 max-w-lg">
-              O NexGuard simula ataques de phishing realistas nos seus
-              funcionários, mede a vulnerabilidade por setor e entrega um plano
-              de ação — com dados fiéis, sem inflação de scanner.
+              O NexGuard simula ataques de phishing realistas nos funcionários da
+              sua empresa, mede a vulnerabilidade por setor e entrega um plano de
+              ação — com números fiéis, sem cliques de robôs inflando o resultado.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
-              <a
-                href={CONTACT}
+              <button
+                onClick={openContact}
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 font-semibold hover:opacity-90 transition"
               >
                 Solicitar demonstração
-              </a>
+              </button>
               <Link
                 to="/login"
                 className="px-6 py-3 rounded-xl border border-white/15 hover:bg-white/5 font-medium transition"
@@ -187,17 +189,17 @@ export function LandingPage() {
             <Feature
               icon="🎣"
               title="1 · Simular"
-              desc="Disparamos e-mails de phishing realistas por setor (boleto, NF, intimação, MFA falso, QR code) em nome de domínios convincentes — com remetentes variados."
+              desc="E-mails de phishing realistas por setor (boleto, nota fiscal, intimação, MFA falso, QR code), enviados em nome de domínios convincentes e com remetentes variados."
             />
             <Feature
               icon="📊"
               title="2 · Medir"
-              desc="Rastreamos abertura, clique e submissão por pessoa e setor, em tempo real — com defesa anti-scanner que garante dados fiéis, não inflados."
+              desc="Abertura, clique e submissão rastreados por pessoa e setor, em tempo real — com defesa anti-robô que mantém os números fiéis a pessoas reais."
             />
             <Feature
               icon="🎓"
               title="3 · Treinar"
-              desc="Quem cai vê na hora um momento educativo. O relatório executivo aponta os setores frágeis e as boas práticas — e a evolução a cada campanha."
+              desc="Quem cai recebe na hora um momento educativo. O relatório executivo aponta os setores frágeis, as boas práticas e a evolução a cada campanha."
             />
           </div>
         </section>
@@ -205,12 +207,36 @@ export function LandingPage() {
         {/* Features */}
         <section className="max-w-6xl mx-auto px-6 pb-20">
           <div className="grid md:grid-cols-3 gap-4">
-            <Feature icon="🎯" title="Dados fiéis" desc="Defesa anti-scanner em 3 camadas: o Defender/Safe Links não infla mais seus números." />
-            <Feature icon="🏢" title="Recorte por setor" desc="Veja exatamente quem abriu, quem clicou e quais setores precisam de reforço." />
-            <Feature icon="📈" title="Evolução" desc="Campanhas recorrentes medem a queda da vulnerabilidade a cada rodada." />
-            <Feature icon="🧰" title="Biblioteca de iscas" desc="Modelos que golpistas realmente usam, em 3 níveis de dificuldade — inclusive quishing (QR)." />
-            <Feature icon="🔒" title="Ético e conforme" desc="Teste autorizado, formulário falso nunca guarda senha, trilha LGPD." />
-            <Feature icon="👥" title="Portal do cliente" desc="O gestor acompanha os próprios resultados em tempo real, sem ver nada de outras empresas." />
+            <Feature
+              icon="🎯"
+              title="Números fiéis"
+              desc="Defesa anti-robô em três camadas: cliques de scanners de segurança não entram na conta — o resultado reflete pessoas de verdade."
+            />
+            <Feature
+              icon="🏢"
+              title="Recorte por setor"
+              desc="Veja exatamente quem abriu, quem clicou e quais áreas precisam de mais reforço."
+            />
+            <Feature
+              icon="📈"
+              title="Evolução"
+              desc="Campanhas recorrentes mostram a queda da vulnerabilidade a cada rodada."
+            />
+            <Feature
+              icon="🧰"
+              title="Biblioteca de iscas"
+              desc="Modelos que golpistas realmente usam, em três níveis de dificuldade — inclusive QR code (quishing)."
+            />
+            <Feature
+              icon="🔒"
+              title="Ético e conforme"
+              desc="Teste autorizado, formulário falso que nunca guarda senhas e trilha de consentimento (LGPD)."
+            />
+            <Feature
+              icon="👥"
+              title="Portal do cliente"
+              desc="O gestor acompanha os próprios resultados em tempo real, sem acesso a dados de outras empresas."
+            />
           </div>
         </section>
 
@@ -221,15 +247,15 @@ export function LandingPage() {
               Quanto da sua equipe cairia hoje?
             </h2>
             <p className="text-slate-300 mb-8">
-              Faça um teste autorizado e descubra — com um relatório que você pode
+              Faça um teste autorizado e descubra — com um relatório pronto para
               levar à diretoria.
             </p>
-            <a
-              href={CONTACT}
+            <button
+              onClick={openContact}
               className="inline-block px-8 py-3.5 rounded-xl bg-gradient-to-r from-brand-500 to-cyan-500 font-semibold hover:opacity-90 transition"
             >
               Solicitar demonstração
-            </a>
+            </button>
           </div>
         </section>
 
@@ -245,6 +271,8 @@ export function LandingPage() {
           </div>
         </footer>
       </div>
+
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
     </div>
   );
 }

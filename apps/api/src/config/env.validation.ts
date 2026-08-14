@@ -30,6 +30,11 @@ export const envSchema = z.object({
   MAIL_SCHEDULER_INTERVAL_MS: z.coerce.number().int().positive().default(15000),
   MAIL_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   MAIL_BATCH_SIZE: z.coerce.number().int().positive().default(25),
+
+  // Leads comerciais (formulário da landing). Destino da notificação e webhook
+  // opcional do Teams (deixado em STANDBY — só dispara se a URL for definida).
+  LEADS_TO: z.string().email().default('contato@nexiumsolutions.com.br'),
+  LEADS_TEAMS_WEBHOOK_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -17,6 +17,7 @@ import { TemplatesModule } from './templates/templates.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { ReportsModule } from './reports/reports.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { LeadsModule } from './leads/leads.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -51,6 +52,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     CampaignsModule,
     ReportsModule,
     TrackingModule,
+    LeadsModule,
     HealthModule,
   ],
   providers: [

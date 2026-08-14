@@ -372,3 +372,22 @@ model AuthorizationConsent {
   @@index([companyId])
   @@map("authorization_consents")
 }
+
+// ─── Leads comerciais (formulário da landing) ─────────────────
+// Solicitações de demonstração vindas do site público. Persistidas para nunca
+// perder um contato mesmo se a notificação por e-mail falhar.
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  company   String
+  email     String
+  phone     String?
+  employees String? // faixa de nº de funcionários (texto livre/opcional)
+  message   String?
+  source    String   @default("landing")
+  notified  Boolean  @default(false) // e-mail de notificação enviado?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("leads")
+}
