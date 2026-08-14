@@ -4,7 +4,8 @@ import { DomainStatus, Lead } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomainsService } from '../domains/domains.service';
 import { SmtpTransportService } from '../mail/smtp-transport.service';
-import { CreateLeadDto } from './dto/lead.dto';
+import { NotFoundException } from '@nestjs/common';
+import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
 
 // Escapa entrada do lead antes de interpolar no HTML do e-mail (anti-injeção).
 const esc = (s?: string | null): string =>
@@ -59,6 +60,22 @@ export class LeadsService {
     return this.prisma.lead.findMany({
       orderBy: { createdAt: 'desc' },
       take: 300,
+    });
+  }
+
+  // Mini-CRM: o operador avança o estágio e/ou registra anotações.
+  async update(id: string, dto: UpdateLeadDto): Promise<Lead> {
+    const exists = await this.prisma.lead.findUnique({ where: { id } });
+    if (!exists) {
+      throw new NotFoundException('Lead não encontrado.');
+    }
+    return this.prisma.lead.update({
+      where: { id },
+      data: {
+        stage: dto.stage ?? undefined,
+        // Permite limpar as anotações enviando string vazia.
+        notes: dto.notes === undefined ? undefined : dto.notes.trim() || null,
+      },
     });
   }
 

@@ -8,6 +8,7 @@ import { Domains } from './pages/Domains';
 import { Campaigns } from './pages/Campaigns';
 import { NewCampaign } from './pages/NewCampaign';
 import { Allowlist } from './pages/Allowlist';
+import { Leads } from './pages/Leads';
 import { LandingPage } from './pages/LandingPage';
 import { ReactNode } from 'react';
 
@@ -56,6 +57,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/campaigns" element={<Protected><Campaigns /></Protected>} />
       <Route path="/campaigns/new" element={<Protected superOnly><NewCampaign /></Protected>} />
+      <Route path="/leads" element={<Protected superOnly><Leads /></Protected>} />
       <Route path="/companies" element={<Protected superOnly><Companies /></Protected>} />
       <Route path="/domains" element={<Protected superOnly><Domains /></Protected>} />
       <Route path="/allowlist" element={<Protected superOnly><Allowlist /></Protected>} />

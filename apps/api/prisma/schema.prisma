@@ -376,18 +376,32 @@ model AuthorizationConsent {
 // ─── Leads comerciais (formulário da landing) ─────────────────
 // Solicitações de demonstração vindas do site público. Persistidas para nunca
 // perder um contato mesmo se a notificação por e-mail falhar.
+enum LeadStage {
+  NOVO
+  CONTATADO
+  QUALIFICADO
+  PROPOSTA
+  GANHO
+  PERDIDO
+}
+
 model Lead {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
   company   String
   email     String
   phone     String?
   employees String? // faixa de nº de funcionários (texto livre/opcional)
   message   String?
-  source    String   @default("landing")
-  notified  Boolean  @default(false) // e-mail de notificação enviado?
-  createdAt DateTime @default(now())
+  source    String    @default("landing")
+  notified  Boolean   @default(false) // e-mail de notificação enviado?
+  // Mini-CRM manual: o operador avança o estágio e anota o acompanhamento.
+  stage     LeadStage @default(NOVO)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([createdAt])
+  @@index([stage])
   @@map("leads")
 }

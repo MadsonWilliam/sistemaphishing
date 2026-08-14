@@ -1,8 +1,16 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { LeadsService } from './leads.service';
-import { CreateLeadDto } from './dto/lead.dto';
+import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 
@@ -24,5 +32,12 @@ export class LeadsController {
   @Get()
   list() {
     return this.leads.list();
+  }
+
+  // Mini-CRM: avançar estágio / anotar (só o operador).
+  @Roles(Role.SUPER_ADMIN)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateLeadDto) {
+    return this.leads.update(id, dto);
   }
 }

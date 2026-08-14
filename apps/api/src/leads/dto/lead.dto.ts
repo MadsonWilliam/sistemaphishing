@@ -1,10 +1,12 @@
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { LeadStage } from '@prisma/client';
 
 // Formulário público da landing. Campos curtos com limite de tamanho para
 // evitar abuso; só nome, empresa e e-mail são obrigatórios.
@@ -43,4 +45,16 @@ export class CreateLeadDto {
   @IsString()
   @MaxLength(200)
   website?: string;
+}
+
+// Atualização manual pelo operador (mini-CRM): avançar estágio e/ou anotar.
+export class UpdateLeadDto {
+  @IsOptional()
+  @IsEnum(LeadStage, { message: 'Estágio inválido.' })
+  stage?: LeadStage;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 const nav = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/campaigns', label: 'Campanhas' },
+  { to: '/leads', label: 'Leads', superOnly: true },
   { to: '/companies', label: 'Empresas', superOnly: true },
   { to: '/domains', label: 'Domínios', superOnly: true },
   { to: '/allowlist', label: 'Allowlist', superOnly: true },
