@@ -56,8 +56,12 @@ export function Leads() {
   });
 
   const patch = useMutation({
-    mutationFn: async (v: { id: string; stage?: Stage; notes?: string }) =>
-      (await api.patch<Lead>(`/leads/${v.id}`, v)).data,
+    mutationFn: async (v: { id: string; stage?: Stage; notes?: string }) => {
+      // O id vai só na URL — enviar no corpo quebra o ValidationPipe
+      // (forbidNonWhitelisted) e retorna 400.
+      const { id, ...body } = v;
+      return (await api.patch<Lead>(`/leads/${id}`, body)).data;
+    },
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['leads'] });
       // Mantém o modal aberto em sincronia com o dado salvo.
