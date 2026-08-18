@@ -151,6 +151,7 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
                     href="/termos"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-brand-400 hover:underline"
                   >
                     Termos e a Política de Privacidade

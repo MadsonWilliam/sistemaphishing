@@ -270,9 +270,14 @@ export function LandingPage() {
                 {new Date().getFullYear()}
               </span>
               <span className="text-slate-700">·</span>
-              <Link to="/termos" className="hover:text-slate-300">
+              <a
+                href="/termos"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-slate-300"
+              >
                 Termos e Privacidade
-              </Link>
+              </a>
             </div>
           </div>
         </footer>
