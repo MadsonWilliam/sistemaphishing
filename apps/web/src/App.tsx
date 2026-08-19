@@ -58,7 +58,7 @@ export default function App() {
       <Route path="/termos" element={<Termos />} />
       <Route path="/" element={<Home />} />
       <Route path="/campaigns" element={<Protected><Campaigns /></Protected>} />
-      <Route path="/campaigns/new" element={<Protected superOnly><NewCampaign /></Protected>} />
+      <Route path="/campaigns/new" element={<Protected><NewCampaign /></Protected>} />
       <Route path="/leads" element={<Protected superOnly><Leads /></Protected>} />
       <Route path="/companies" element={<Protected superOnly><Companies /></Protected>} />
       <Route path="/domains" element={<Protected superOnly><Domains /></Protected>} />

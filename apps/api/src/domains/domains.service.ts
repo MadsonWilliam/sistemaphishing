@@ -66,6 +66,31 @@ export class DomainsService {
     return domains.map((d) => this.toPublic(d));
   }
 
+  // Lista mínima de remetentes para MONTAR campanha (admin do cliente inclusive).
+  // NÃO expõe config SMTP (host/usuário/senha) — só o que dá para escolher.
+  // Escopo: domínios compartilhados (companyId null) + os da própria empresa.
+  async listAvailable(scopeCompanyId?: string) {
+    const where =
+      scopeCompanyId === undefined
+        ? {}
+        : { OR: [{ companyId: null }, { companyId: scopeCompanyId }] };
+    const domains = await this.prisma.sendingDomain.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        domain: true,
+        status: true,
+        identities: {
+          where: { isActive: true },
+          orderBy: { localPart: 'asc' },
+          select: { id: true, localPart: true, displayName: true },
+        },
+      },
+    });
+    return domains;
+  }
+
   async findOneOrThrow(id: string) {
     const domain = await this.prisma.sendingDomain.findUnique({
       where: { id },

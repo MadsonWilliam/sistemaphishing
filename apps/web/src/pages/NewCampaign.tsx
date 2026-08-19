@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Btn, Card, Field, PageHeader } from '../components/ui';
 
 interface Company {
@@ -54,9 +55,12 @@ interface Recipient {
 
 export function NewCampaign() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuper = user?.role === 'SUPER_ADMIN';
   const [error, setError] = useState('');
   const [f, setF] = useState({
-    companyId: '',
+    // Admin do cliente: empresa já é a dele (backend também força isso).
+    companyId: isSuper ? '' : user?.companyId ?? '',
     templateId: '',
     name: '',
     postClickBehavior: 'EDUCATIONAL',
@@ -113,14 +117,17 @@ export function NewCampaign() {
   const companies = useQuery({
     queryKey: ['companies'],
     queryFn: async () => (await api.get<Company[]>('/companies')).data,
+    enabled: isSuper, // admin do cliente não lista empresas (403)
   });
   const templates = useQuery({
     queryKey: ['templates'],
     queryFn: async () => (await api.get<Template[]>('/templates')).data,
   });
+  // Remetentes disponíveis (sem config SMTP) — escopado pelo backend.
   const domains = useQuery({
-    queryKey: ['sending-domains'],
-    queryFn: async () => (await api.get<Domain[]>('/sending-domains')).data,
+    queryKey: ['sending-domains-available'],
+    queryFn: async () =>
+      (await api.get<Domain[]>('/sending-domains/available')).data,
   });
 
   const identities = useMemo(
@@ -135,6 +142,16 @@ export function NewCampaign() {
         ),
     [domains.data],
   );
+
+  // Admin do cliente não configura SMTP: se houver remetente(s), já marca por
+  // padrão (hoje só existe um). Quando o admin cadastrar vários, ele escolhe.
+  const seededSenders = useRef(false);
+  useEffect(() => {
+    if (!isSuper && !seededSenders.current && identities.length > 0) {
+      setSenderIds(identities.map((i) => i.id));
+      seededSenders.current = true;
+    }
+  }, [isSuper, identities]);
 
   const submit = useMutation({
     mutationFn: async (opts: { send: boolean }) => {
@@ -177,19 +194,28 @@ export function NewCampaign() {
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4 space-y-3">
           <div className="text-sm font-medium">1 · Básico</div>
-          <label className="block">
-            <span className="block text-xs text-slate-400 mb-1">Empresa-alvo</span>
-            <select
-              value={f.companyId}
-              onChange={(e) => setF({ ...f, companyId: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
-            >
-              <option value="">Selecione…</option>
-              {companies.data?.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </label>
+          {isSuper ? (
+            <label className="block">
+              <span className="block text-xs text-slate-400 mb-1">
+                Empresa-alvo
+              </span>
+              <select
+                value={f.companyId}
+                onChange={(e) => setF({ ...f, companyId: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+              >
+                <option value="">Selecione…</option>
+                {companies.data?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="text-xs text-slate-400 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+              Esta campanha é da <strong className="text-slate-200">sua
+              empresa</strong> e só aparece para você.
+            </p>
+          )}
           <label className="block">
             <span className="block text-xs text-slate-400 mb-1">Isca (template)</span>
             <select
@@ -373,8 +399,9 @@ export function NewCampaign() {
           <div className="text-sm font-medium">4 · Remetentes (rotação)</div>
           {identities.length === 0 ? (
             <p className="text-xs text-amber-400">
-              Nenhum remetente de domínio verificado. Cadastre/verifique um
-              domínio em "Domínios" antes de disparar.
+              {isSuper
+                ? 'Nenhum remetente de domínio verificado. Cadastre/verifique um domínio em "Domínios" antes de disparar.'
+                : 'Nenhum remetente disponível ainda. Peça ao administrador da plataforma para configurar um remetente.'}
             </p>
           ) : (
             <div className="space-y-1 max-h-40 overflow-auto">

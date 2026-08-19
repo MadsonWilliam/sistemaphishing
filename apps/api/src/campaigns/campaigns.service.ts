@@ -285,12 +285,16 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     return html;
   }
 
-  async send(id: string, dto: SendCampaignDto) {
+  // scopeCompanyId: quando presente (admin do cliente), só dispara campanha da
+  // própria empresa — outra empresa responde 404.
+  async send(id: string, dto: SendCampaignDto, scopeCompanyId?: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
       include: { template: true, company: { select: { name: true } } },
     });
-    if (!campaign) throw new NotFoundException('Campanha não encontrada.');
+    if (!campaign || (scopeCompanyId && campaign.companyId !== scopeCompanyId)) {
+      throw new NotFoundException('Campanha não encontrada.');
+    }
     if (
       campaign.status !== CampaignStatus.DRAFT &&
       campaign.status !== CampaignStatus.SCHEDULED

@@ -82,11 +82,9 @@ export function Campaigns() {
         title="Campanhas"
         subtitle="Simulações disparadas e seus resultados."
         action={
-          isSuper ? (
-            <Link to="/campaigns/new">
-              <Btn>+ Nova campanha</Btn>
-            </Link>
-          ) : undefined
+          <Link to="/campaigns/new">
+            <Btn>+ Nova campanha</Btn>
+          </Link>
         }
       />
 

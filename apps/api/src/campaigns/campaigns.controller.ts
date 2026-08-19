@@ -25,18 +25,26 @@ function scopeOf(user: AuthUser): string | undefined {
 export class CampaignsController {
   constructor(private readonly campaigns: CampaignsService) {}
 
-  // ── Escritas: só operador (SUPER_ADMIN) ──
-  @Roles(Role.SUPER_ADMIN)
+  // ── Criar/disparar: operador OU admin do cliente (escopado à empresa dele) ──
+  @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
   @Post()
-  create(@Body() dto: CreateCampaignDto) {
+  create(@Body() dto: CreateCampaignDto, @CurrentUser() user: AuthUser) {
+    // Admin do cliente só cria para a PRÓPRIA empresa — nunca escolhe outra.
+    if (user.role !== Role.SUPER_ADMIN) {
+      dto.companyId = user.companyId ?? '__none__';
+    }
     return this.campaigns.create(dto);
   }
 
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
   @Post(':id/send')
   @HttpCode(200)
-  send(@Param('id') id: string, @Body() dto: SendCampaignDto) {
-    return this.campaigns.send(id, dto);
+  send(
+    @Param('id') id: string,
+    @Body() dto: SendCampaignDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.campaigns.send(id, dto, scopeOf(user));
   }
 
   @Roles(Role.SUPER_ADMIN)

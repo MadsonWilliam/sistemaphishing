@@ -14,13 +14,17 @@ import { DomainsService } from './domains.service';
 import { DeliverabilityService } from './deliverability.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
+  CurrentUser,
+  AuthUser,
+} from '../common/decorators/current-user.decorator';
+import {
   CreateSendingDomainDto,
   CreateSenderIdentityDto,
   SendTestEmailDto,
   UpdateSendingDomainDto,
 } from './dto/domain.dto';
 
-// Gestão dos domínios de envio é da plataforma (SUPER_ADMIN) neste estágio.
+// Gestão dos domínios de envio (config SMTP) é da plataforma (SUPER_ADMIN).
 @Roles(Role.SUPER_ADMIN)
 @Controller('sending-domains')
 export class DomainsController {
@@ -28,6 +32,16 @@ export class DomainsController {
     private readonly domains: DomainsService,
     private readonly deliverability: DeliverabilityService,
   ) {}
+
+  // Remetentes disponíveis para MONTAR campanha — SEM config SMTP. Liberado ao
+  // admin do cliente (escopado à empresa dele). Declarado antes das rotas :id.
+  @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
+  @Get('available')
+  available(@CurrentUser() user: AuthUser) {
+    const scope =
+      user.role === Role.SUPER_ADMIN ? undefined : user.companyId ?? '__none__';
+    return this.domains.listAvailable(scope);
+  }
 
   @Post()
   create(@Body() dto: CreateSendingDomainDto) {
