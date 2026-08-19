@@ -100,26 +100,66 @@ export function educationalPage(opts: {
   );
 }
 
+// Página de "login/portal" convincente (tema claro, profissional). Marca é
+// OPT-IN: só usa logo/cor do cliente quando informados; sem marca, fica um
+// portal corporativo neutro. NUNCA grava credenciais (valores ignorados no
+// trackFormSubmit) — o formulário existe só para medir a submissão.
 export function fakeFormPage(opts: { token: string; brand?: Brand }): string {
-  return shell(
-    'Confirmação de segurança',
-    `<div class="logo">🔐</div>
-     <h1>Confirme seu acesso</h1>
-     <p>Por segurança, confirme seus dados e <strong>defina uma nova senha</strong> de acesso para continuar.</p>
-     <form method="POST" action="/t/f/${opts.token}" autocomplete="off">
-       <label>E-mail corporativo</label>
-       <input type="email" name="email" placeholder="voce@empresa.com" required>
-       <label>Nome completo</label>
-       <input type="text" name="fullname" placeholder="Seu nome" required>
-       <label>Nova senha</label>
-       <input type="password" name="newpass" placeholder="••••••••" required>
-       <label>Confirmar nova senha</label>
-       <input type="password" name="confirm" placeholder="••••••••" required>
-       <button type="submit">Confirmar e continuar</button>
-     </form>
-     <p class="muted">Seus dados são protegidos. Ao continuar você concorda com a política de segurança.</p>`,
-    opts.brand,
-  );
+  const color = safeColor(opts.brand?.color);
+  const logoUrl = safeUrl(opts.brand?.logoUrl);
+  const brandMark = logoUrl
+    ? `<img src="${logoUrl}" alt="" style="max-height:40px;max-width:180px">`
+    : `<div class="mark">
+         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+       </div>`;
+  return `<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acesso ao portal</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:#eef1f6;color:#1f2937;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .card{background:#fff;width:100%;max-width:400px;border-radius:14px;padding:34px 30px 28px;
+    box-shadow:0 10px 30px rgba(17,24,39,.10);border:1px solid #e5e7eb}
+  .brand{display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+  .mark{width:44px;height:44px;border-radius:12px;background:${color};display:flex;align-items:center;justify-content:center}
+  h1{font-size:20px;font-weight:600;margin:0 0 6px;text-align:center}
+  .sub{font-size:14px;color:#6b7280;text-align:center;margin:0 0 22px;line-height:1.5}
+  label{display:block;font-size:13px;font-weight:500;color:#374151;margin:14px 0 6px}
+  input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid #d1d5db;font-size:15px;color:#111827;background:#fff;transition:border .15s,box-shadow .15s}
+  input:focus{outline:none;border-color:${color};box-shadow:0 0 0 3px ${color}22}
+  button{width:100%;margin-top:22px;padding:12px;border:0;border-radius:9px;background:${color};
+    color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(.95)}
+  .secure{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;font-size:12px;color:#059669}
+  .secure svg{flex:none}
+  .foot{margin-top:22px;text-align:center;font-size:12px;color:#9ca3af}
+  .foot a{color:#9ca3af}
+</style></head>
+<body>
+  <div class="card">
+    <div class="brand">${brandMark}</div>
+    <h1>Confirme seu acesso</h1>
+    <p class="sub">Por segurança, confirme seus dados e defina uma nova senha para continuar.</p>
+    <form method="POST" action="/t/f/${opts.token}" autocomplete="off">
+      <label>E-mail corporativo</label>
+      <input type="email" name="email" placeholder="voce@empresa.com" required>
+      <label>Nome completo</label>
+      <input type="text" name="fullname" placeholder="Seu nome" required>
+      <label>Nova senha</label>
+      <input type="password" name="newpass" placeholder="••••••••" required>
+      <label>Confirmar nova senha</label>
+      <input type="password" name="confirm" placeholder="••••••••" required>
+      <button type="submit">Confirmar e continuar</button>
+    </form>
+    <div class="secure">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Conexão segura · seus dados são protegidos
+    </div>
+  </div>
+  <p class="foot">© ${new Date().getFullYear()} · Portal corporativo · Política de privacidade</p>
+</body></html>`;
 }
 
 export function reportedPage(opts?: { brand?: Brand }): string {
