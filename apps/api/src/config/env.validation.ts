@@ -7,8 +7,11 @@ export const envSchema = z.object({
     .default('development'),
   API_PORT: z.coerce.number().int().positive().default(3333),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  // URL pública base usada nos links/pixel de rastreio dos e-mails.
+  // URL institucional/portal (login, relatórios públicos, formulário de lead).
   APP_BASE_URL: z.string().url().default('http://localhost:3333'),
+  // Base dos LINKS DE PHISHING (clique/pixel). Separada de propósito: nunca deve
+  // ser o domínio do portal (entregaria o teste). Se vazia, cai no APP_BASE_URL.
+  TRACKING_BASE_URL: z.string().url().optional(),
 
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url().optional(),

@@ -37,7 +37,20 @@ import { RolesGuard } from './common/guards/roles.guard';
       ? [
           ServeStaticModule.forRoot({
             rootPath: join(__dirname, '..', '..', 'web', 'dist'),
-            exclude: ['/api', '/api/(.*)', '/t', '/t/(.*)', '/r', '/r/(.*)'],
+            // Exclui /api, rastreio (/t, /r) e os caminhos críveis de phishing
+            // (/acesso, /portal, /fatura, /documento) do SPA — são do backend.
+            exclude: [
+              '/api',
+              '/api/(.*)',
+              '/t',
+              '/t/(.*)',
+              '/r',
+              '/r/(.*)',
+              '/acesso/(.*)',
+              '/portal/(.*)',
+              '/fatura/(.*)',
+              '/documento/(.*)',
+            ],
           }),
         ]
       : []),

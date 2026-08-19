@@ -26,11 +26,16 @@ async function bootstrap() {
   // Cookies httpOnly de sessão (access/refresh) — ver auth.controller.
   app.use(cookieParser());
 
-  // Rastreio (/t/...) e relatório público (/r/...) ficam na raiz, fora de /api.
+  // Rastreio (/t/...), relatório público (/r/...) e os caminhos críveis de
+  // phishing (/acesso, /portal, /fatura, /documento) ficam na raiz, fora de /api.
   app.setGlobalPrefix('api', {
     exclude: [
       { path: 't/(.*)', method: RequestMethod.ALL },
       { path: 'r/(.*)', method: RequestMethod.ALL },
+      { path: 'acesso/(.*)', method: RequestMethod.ALL },
+      { path: 'portal/(.*)', method: RequestMethod.ALL },
+      { path: 'fatura/(.*)', method: RequestMethod.ALL },
+      { path: 'documento/(.*)', method: RequestMethod.ALL },
     ],
   });
 

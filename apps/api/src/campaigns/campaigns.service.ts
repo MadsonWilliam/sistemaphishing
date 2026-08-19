@@ -21,6 +21,25 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// Caminho crível do link por setor (o que a vítima vê no hover). Precisa estar
+// na lista branca do PhishLinkController + exclusões do main.ts/app.module.
+const CLICK_SLUG: Record<string, string> = {
+  FINANCEIRO: 'fatura',
+  CONTABILIDADE: 'fatura',
+  COMPRAS: 'fatura',
+  RH: 'portal',
+  TI: 'acesso',
+  JURIDICO: 'documento',
+  ADMINISTRATIVO: 'documento',
+  DIRETORIA: 'documento',
+  LOGISTICA: 'acesso',
+  GERAL: 'acesso',
+};
+const clickSlugFor = (sector?: string | null): string =>
+  (sector && CLICK_SLUG[sector]) || 'acesso';
+// Abertura de "anexo": caminho de documento (marca ?a=1 = anexo no tracking).
+const ATTACH_SLUG = 'documento';
+
 @Injectable()
 export class CampaignsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CampaignsService.name);
@@ -244,8 +263,15 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Normaliza o domínio de link informado (aceita "host" ou "https://host").
+  // Sem domínio próprio, usa a BASE DE RASTREIO (nunca o portal) — cai no
+  // APP_BASE_URL só se TRACKING_BASE_URL não estiver configurada.
   private linkBase(linkDomain?: string | null): string {
-    if (!linkDomain) return this.config.getOrThrow<string>('APP_BASE_URL');
+    if (!linkDomain) {
+      return (
+        this.config.get<string>('TRACKING_BASE_URL') ??
+        this.config.getOrThrow<string>('APP_BASE_URL')
+      );
+    }
     const host = linkDomain.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
     return `https://${host}`;
   }
@@ -258,11 +284,14 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
       token: string;
       showReport: boolean;
       baseUrl: string;
+      clickSlug: string;
     },
   ): string {
     const baseUrl = p.baseUrl;
-    const link = `${baseUrl}/t/c/${p.token}`;
-    const attachment = `${baseUrl}/t/a/${p.token}`;
+    // Caminhos críveis (ex.: /fatura/<token>) — mais convincentes no hover que
+    // /t/c/<token>. O clique continua rastreado igual (ver PhishLinkController).
+    const link = `${baseUrl}/${p.clickSlug}/${p.token}`;
+    const attachment = `${baseUrl}/${ATTACH_SLUG}/${p.token}?a=1`;
     const qrImg = `<img src="${baseUrl}/t/q/${p.token}.png" width="200" height="200" alt="Escaneie para acessar" style="display:block;margin:8px 0">`;
     let html = templateHtml
       .replace(/{{\s*(nome|name)\s*}}/gi, escapeHtml(p.name))
@@ -342,6 +371,7 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
             token: t.token,
             showReport: campaign.showReportButton,
             baseUrl: base,
+            clickSlug: clickSlugFor(campaign.template.sector),
           }),
           campaignId: campaign.id,
           campaignTargetId: t.id,

@@ -388,10 +388,20 @@ export function NewCampaign() {
               ))}
             </datalist>
             <span className="block text-xs text-slate-500 mt-1">
-              Deixa o link crível. O ideal é usar o <strong>mesmo domínio do
-              remetente</strong>. O domínio precisa apontar para a plataforma
-              (adicionar no EasyPanel).
+              O caminho do link já é crível por setor (ex.:{' '}
+              <code>/fatura/…</code>, <code>/acesso/…</code>). Para máxima
+              realância, use aqui um <strong>domínio disfarçado</strong> que
+              aponte para a plataforma. Vazio = domínio técnico da plataforma.
             </span>
+            {/^(https?:\/\/)?[^/]*(nexguard|nexium\.solutions|easypanel\.host)/i.test(
+              f.linkDomain.trim(),
+            ) && (
+              <span className="block text-xs text-amber-400 mt-1">
+                ⚠️ Este parece o domínio do <strong>portal/plataforma</strong> —
+                a vítima perceberia que é uma ferramenta. Use um domínio
+                disfarçado (ou deixe vazio).
+              </span>
+            )}
           </label>
         </Card>
 
