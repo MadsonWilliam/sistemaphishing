@@ -217,6 +217,7 @@ export class TrackingService {
 
     const brand = {
       color: c.brandColor,
+      color2: c.brandColor2,
       logoUrl: c.brandLogoUrl,
       trainingUrl: c.trainingUrl,
     };
@@ -240,15 +241,20 @@ export class TrackingService {
   // domínio próprio da campanha). Scanear no celular = clicar.
   async qrPng(token: string): Promise<Buffer> {
     const target = await this.findTarget(token);
-    const fallback = this.config.getOrThrow<string>('APP_BASE_URL');
-    let url = fallback;
-    if (target) {
-      const ld = target.campaign.linkDomain;
-      const base = ld
-        ? `https://${ld.replace(/^https?:\/\//i, '').replace(/\/+$/, '')}`
-        : fallback;
-      url = `${base}/t/c/${token}`;
+    // Base = domínio do remetente deste alvo (casando link↔remetente); se ainda
+    // não atribuído, cai na base de rastreio. Caminho crível /acesso.
+    const trackingBase =
+      this.config.get<string>('TRACKING_BASE_URL') ??
+      this.config.getOrThrow<string>('APP_BASE_URL');
+    let base = trackingBase;
+    if (target?.senderIdentityId) {
+      const identity = await this.prisma.senderIdentity.findUnique({
+        where: { id: target.senderIdentityId },
+        include: { domain: true },
+      });
+      if (identity?.domain?.domain) base = `https://${identity.domain.domain}`;
     }
+    const url = `${base}/acesso/${token}`;
     return QRCode.toBuffer(url, {
       type: 'png',
       width: 240,
@@ -290,6 +296,7 @@ export class TrackingService {
     const c = target.campaign;
     const brand = {
       color: c.brandColor,
+      color2: c.brandColor2,
       logoUrl: c.brandLogoUrl,
       trainingUrl: c.trainingUrl,
     };
@@ -316,6 +323,7 @@ export class TrackingService {
       microTraining: c.microTraining,
       brand: {
         color: c.brandColor,
+        color2: c.brandColor2,
         logoUrl: c.brandLogoUrl,
         trainingUrl: c.trainingUrl,
       },

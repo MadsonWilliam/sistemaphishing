@@ -11,6 +11,7 @@ import {
   IsString,
   IsUrl,
   Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested,
@@ -58,25 +59,22 @@ export class CreateCampaignDto {
   @IsUrl({ require_tld: false })
   landingRedirectUrl?: string;
 
-  // Domínio próprio para os links (ex.: link.rsweb.net.br). Deve apontar para
-  // a aplicação. Se vazio, usa o domínio base da plataforma.
+  // Marca do cliente na landing. O logo aceita URL http(s) OU data URI (upload
+  // do arquivo pelo operador) — por isso é string com limite, não @IsUrl.
   @IsOptional()
   @IsString()
-  linkDomain?: string;
-
-  // Marca do cliente na landing.
-  @IsOptional()
-  @IsUrl({ require_tld: false })
+  @MaxLength(400_000) // ~300KB de imagem em base64
   brandLogoUrl?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(64)
   brandColor?: string;
 
-  // Trilha de treino opcional (link mostrado a quem cai).
   @IsOptional()
-  @IsUrl({ require_tld: false })
-  trainingUrl?: string;
+  @IsString()
+  @MaxLength(64)
+  brandColor2?: string;
 
   // Recorrência automática.
   @IsOptional()

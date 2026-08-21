@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -67,10 +67,9 @@ export function NewCampaign() {
     showReportButton: true,
     microTraining: true,
     dripWindowSeconds: 0,
-    linkDomain: '',
     brandLogoUrl: '',
     brandColor: '',
-    trainingUrl: '',
+    brandColor2: '',
     recurrence: 'NONE',
   });
   const [senderIds, setSenderIds] = useState<string[]>([]);
@@ -81,6 +80,22 @@ export function NewCampaign() {
     department: '',
   });
   const [bulk, setBulk] = useState('');
+  const [logoErr, setLogoErr] = useState('');
+
+  function onLogoFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 260_000) {
+      setLogoErr('Imagem muito grande (máx ~250KB). Reduza e tente de novo.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setF((prev) => ({ ...prev, brandLogoUrl: String(reader.result) }));
+      setLogoErr('');
+    };
+    reader.readAsDataURL(file);
+  }
 
   function addRecipient() {
     const email = rec.email.trim().toLowerCase();
@@ -163,10 +178,9 @@ export function NewCampaign() {
         showReportButton: f.showReportButton,
         microTraining: f.microTraining,
         dripWindowSeconds: Number(f.dripWindowSeconds),
-        linkDomain: f.linkDomain.trim() || undefined,
         brandLogoUrl: f.brandLogoUrl.trim() || undefined,
         brandColor: f.brandColor.trim() || undefined,
-        trainingUrl: f.trainingUrl.trim() || undefined,
+        brandColor2: f.brandColor2.trim() || undefined,
         recurrence: f.recurrence,
         recipients,
       });
@@ -371,38 +385,12 @@ export function NewCampaign() {
             value={f.dripWindowSeconds}
             onChange={(e) => setF({ ...f, dripWindowSeconds: Number(e.target.value) })}
           />
-          <label className="block">
-            <span className="block text-xs text-slate-400 mb-1">
-              Domínio dos links (opcional)
-            </span>
-            <input
-              list="linkdomains"
-              placeholder="ex.: link.rsweb.net.br (vazio = domínio da plataforma)"
-              value={f.linkDomain}
-              onChange={(e) => setF({ ...f, linkDomain: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
-            />
-            <datalist id="linkdomains">
-              {(domains.data ?? []).map((d) => (
-                <option key={d.id} value={d.domain} />
-              ))}
-            </datalist>
-            <span className="block text-xs text-slate-500 mt-1">
-              O caminho do link já é crível por setor (ex.:{' '}
-              <code>/fatura/…</code>, <code>/acesso/…</code>). Para máxima
-              realância, use aqui um <strong>domínio disfarçado</strong> que
-              aponte para a plataforma. Vazio = domínio técnico da plataforma.
-            </span>
-            {/^(https?:\/\/)?[^/]*(nexguard|nexium\.solutions|easypanel\.host)/i.test(
-              f.linkDomain.trim(),
-            ) && (
-              <span className="block text-xs text-amber-400 mt-1">
-                ⚠️ Este parece o domínio do <strong>portal/plataforma</strong> —
-                a vítima perceberia que é uma ferramenta. Use um domínio
-                disfarçado (ou deixe vazio).
-              </span>
-            )}
-          </label>
+          <p className="text-xs text-slate-500">
+            🔗 O domínio do link agora é o <strong>mesmo do remetente</strong>{' '}
+            escolhido (ex.: remetente <code>contabilmaisbrasil.com.br</code> →
+            link <code>contabilmaisbrasil.com.br/fatura/…</code>). Nada a
+            configurar aqui.
+          </p>
         </Card>
 
         <Card className="p-4 space-y-3">
@@ -435,33 +423,61 @@ export function NewCampaign() {
           )}
         </Card>
 
-        <Card className="p-4 space-y-3 lg:col-span-2">
-          <div className="text-sm font-medium">5 · Opcionais</div>
-          <div className="grid md:grid-cols-3 gap-3">
-            <label className="block">
+        <Card className="p-4 space-y-4 lg:col-span-2">
+          <div className="text-sm font-medium">5 · Opcionais — marca do cliente</div>
+          <p className="text-xs text-slate-500">
+            Use só se o cliente <strong>quiser</strong> a landing com a cara
+            dele. Sem nada aqui, a página falsa fica um portal neutro.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Logo (upload) */}
+            <div>
               <span className="block text-xs text-slate-400 mb-1">
-                Logo do cliente (URL) — aparece na landing
+                Logo do cliente (aparece na landing)
               </span>
-              <input
-                placeholder="https://cliente.com/logo.png"
-                value={f.brandLogoUrl}
-                onChange={(e) => setF({ ...f, brandLogoUrl: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
-              />
-            </label>
-            <label className="block">
-              <span className="block text-xs text-slate-400 mb-1">
-                Cor da marca (landing)
+              <div className="flex items-center gap-3">
+                {f.brandLogoUrl ? (
+                  <img
+                    src={f.brandLogoUrl}
+                    alt=""
+                    className="h-10 max-w-[120px] object-contain bg-white rounded px-1"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-slate-800 grid place-items-center text-slate-500 text-[10px]">
+                    logo
+                  </div>
+                )}
+                <label className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs cursor-pointer">
+                  Enviar imagem
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={onLogoFile}
+                  />
+                </label>
+                {f.brandLogoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setF({ ...f, brandLogoUrl: '' })}
+                    className="text-xs text-slate-500 hover:text-red-400"
+                  >
+                    remover
+                  </button>
+                )}
+              </div>
+              {logoErr && (
+                <span className="block text-xs text-amber-400 mt-1">{logoErr}</span>
+              )}
+              <span className="block text-[11px] text-slate-500 mt-1">
+                PNG/JPG/SVG até ~250KB. A imagem fica embutida — não precisa de
+                link público.
               </span>
-              <input
-                type="text"
-                placeholder="#1a73e8"
-                value={f.brandColor}
-                onChange={(e) => setF({ ...f, brandColor: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
-              />
-            </label>
-            <label className="block">
+            </div>
+
+            {/* Recorrência */}
+            <div>
               <span className="block text-xs text-slate-400 mb-1">
                 Recorrência automática
               </span>
@@ -470,28 +486,35 @@ export function NewCampaign() {
                 onChange={(e) => setF({ ...f, recurrence: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
               >
-                <option value="NONE">Não repetir</option>
-                <option value="WEEKLY">Semanal</option>
-                <option value="MONTHLY">Mensal</option>
-                <option value="QUARTERLY">Trimestral</option>
+                <option value="NONE">Não repetir (campanha única)</option>
+                <option value="WEEKLY">Repetir toda semana</option>
+                <option value="MONTHLY">Repetir todo mês</option>
+                <option value="QUARTERLY">Repetir a cada trimestre</option>
               </select>
-            </label>
+              <span className="block text-[11px] text-slate-500 mt-1">
+                Re-dispara a <strong>mesma</strong> campanha (mesmos alvos e
+                configuração) no intervalo, medindo a evolução sozinha.
+              </span>
+            </div>
           </div>
-          <label className="block">
-            <span className="block text-xs text-slate-400 mb-1">
-              Link de treino (mostrado a quem cai) — opcional
-            </span>
-            <input
-              placeholder="https://treino.suaempresa.com/phishing"
-              value={f.trainingUrl}
-              onChange={(e) => setF({ ...f, trainingUrl: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+
+          {/* Cores (até 2) */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <ColorField
+              label="Cor principal da marca"
+              value={f.brandColor}
+              onChange={(v) => setF({ ...f, brandColor: v })}
             />
-          </label>
-          <p className="text-xs text-slate-500">
-            Recorrência repete a campanha (mesmos alvos e config) e mede a
-            evolução sozinha. Iscas com QR: escolha "Formulário falso" acima para
-            contar como "submeteu".
+            <ColorField
+              label="Cor secundária (opcional)"
+              value={f.brandColor2}
+              onChange={(v) => setF({ ...f, brandColor2: v })}
+            />
+          </div>
+
+          <p className="text-[11px] text-slate-500">
+            Iscas com QR: escolha "Formulário falso" no passo 3 para contar como
+            "submeteu".
           </p>
         </Card>
       </div>
@@ -512,6 +535,67 @@ export function NewCampaign() {
         >
           Salvar rascunho
         </Btn>
+      </div>
+    </div>
+  );
+}
+
+const COLOR_PRESETS = [
+  '#2563eb', '#1a73e8', '#0ea5e9', '#0891b2',
+  '#059669', '#16a34a', '#65a30d', '#ca8a04',
+  '#ea580c', '#dc2626', '#e11d48', '#db2777',
+  '#7c3aed', '#4f46e5', '#0f172a', '#475569',
+];
+
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <span className="block text-xs text-slate-400 mb-1">{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563eb'}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-10 rounded bg-slate-950 border border-slate-700 cursor-pointer p-0.5"
+        />
+        <input
+          type="text"
+          placeholder="#1a73e8"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-28 px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="text-xs text-slate-500 hover:text-red-400"
+          >
+            limpar
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {COLOR_PRESETS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            title={c}
+            onClick={() => onChange(c)}
+            className={`h-6 w-6 rounded-full border transition ${
+              value.toLowerCase() === c ? 'border-white ring-2 ring-white/40' : 'border-white/20'
+            }`}
+            style={{ background: c }}
+          />
+        ))}
       </div>
     </div>
   );

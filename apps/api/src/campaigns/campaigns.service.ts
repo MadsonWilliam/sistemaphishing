@@ -87,10 +87,10 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
         showReportButton: dto.showReportButton ?? undefined,
         microTraining: dto.microTraining ?? undefined,
         landingRedirectUrl: dto.landingRedirectUrl ?? null,
-        linkDomain: dto.linkDomain?.trim() || null,
+        // O domínio do link agora é derivado do remetente no envio (ver send()).
         brandLogoUrl: dto.brandLogoUrl?.trim() || null,
         brandColor: dto.brandColor?.trim() || null,
-        trainingUrl: dto.trainingUrl?.trim() || null,
+        brandColor2: dto.brandColor2?.trim() || null,
         recurrence: dto.recurrence ?? undefined,
         dripWindowSeconds: dto.dripWindowSeconds ?? undefined,
         dripJitterSeconds: dto.dripJitterSeconds ?? undefined,
@@ -335,6 +335,7 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
 
     const identities = await this.prisma.senderIdentity.findMany({
       where: { id: { in: dto.senderIdentityIds }, isActive: true },
+      include: { domain: true },
     });
     if (identities.length === 0) {
       throw new BadRequestException(
@@ -349,11 +350,14 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
       throw new BadRequestException('Campanha sem destinatários.');
     }
 
-    const base = this.linkBase(campaign.linkDomain);
     const items: OutboxItem[] = [];
     await Promise.all(
       targets.map((t, idx) => {
         const identity = identities[idx % identities.length];
+        // Domínio do link = domínio do PRÓPRIO remetente deste alvo (casam →
+        // máximo de convincência). Ex.: noreply@contabilmaisbrasil.com.br →
+        // link contabilmaisbrasil.com.br/fatura/<token>.
+        const base = this.linkBase(identity.domain.domain);
         const name = t.toName ?? 'colaborador';
         items.push({
           senderIdentityId: identity.id,

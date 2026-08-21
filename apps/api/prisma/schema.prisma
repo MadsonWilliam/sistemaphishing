@@ -281,10 +281,12 @@ model Campaign {
   // o domínio base da plataforma.
   linkDomain String?
 
-  // Marca do cliente na landing (mais convincente).
+  // Marca do cliente na landing (mais convincente). brandLogoUrl aceita URL
+  // http(s) OU data URI (upload). brandColor2 = 2ª cor da identidade (opcional).
   brandLogoUrl String?
   brandColor   String?
-  // Trilha de treino opcional (link) mostrada a quem cai.
+  brandColor2  String?
+  // Trilha de treino opcional (link) mostrada a quem cai (legado — não exposto).
   trainingUrl String?
 
   // Recorrência automática (mede evolução sozinho).
@@ -380,6 +382,7 @@ enum LeadStage {
   NOVO
   CONTATADO
   QUALIFICADO
+  TESTE // liberado p/ 1ª campanha de avaliação do ambiente
   PROPOSTA
   GANHO
   PERDIDO

@@ -165,20 +165,33 @@ export function Dashboard() {
             </p>
           )}
         </div>
-        <select
-          value={current}
-          onChange={(e) => {
-            setSelected(e.target.value);
-            setSectorFilter(null);
-          }}
-          className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
-        >
-          {campaigns.data.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} {c.company?.name ? `· ${c.company.name}` : ''}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={current}
+            onChange={(e) => {
+              setSelected(e.target.value);
+              setSectorFilter(null);
+            }}
+            className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+          >
+            {campaigns.data.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.company?.name ? `· ${c.company.name}` : ''}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() =>
+              current &&
+              window.open(`/api/campaigns/${current}/report/view`, '_blank')
+            }
+            disabled={!current}
+            className="px-3 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+            title="Abre o relatório em nova aba para imprimir ou salvar em PDF"
+          >
+            🖨️ Imprimir relatório
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}

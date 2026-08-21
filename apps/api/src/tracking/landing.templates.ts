@@ -4,6 +4,7 @@
 
 export interface Brand {
   color?: string | null;
+  color2?: string | null;
   logoUrl?: string | null;
   trainingUrl?: string | null;
 }
@@ -14,8 +15,18 @@ const safeColor = (c?: string | null): string =>
   c && /^(#[0-9a-fA-F]{3,8}|rgb\([\d\s,.%]+\)|rgba\([\d\s,.%]+\)|[a-zA-Z]{3,20})$/.test(c.trim())
     ? c.trim()
     : '#2563eb';
-const safeUrl = (u?: string | null): string | null =>
-  u && /^https?:\/\/[^\s"'<>]+$/i.test(u.trim()) ? u.trim() : null;
+const safeUrl = (u?: string | null): string | null => {
+  if (!u) return null;
+  const t = u.trim();
+  // URL http(s) normal…
+  if (/^https?:\/\/[^\s"'<>]+$/i.test(t)) return t;
+  // …ou imagem enviada como data URI (upload do operador).
+  if (
+    /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=\s]+$/i.test(t)
+  )
+    return t;
+  return null;
+};
 
 const shell = (title: string, body: string, brand?: Brand) => {
   const color = safeColor(brand?.color);
@@ -106,6 +117,8 @@ export function educationalPage(opts: {
 // trackFormSubmit) — o formulário existe só para medir a submissão.
 export function fakeFormPage(opts: { token: string; brand?: Brand }): string {
   const color = safeColor(opts.brand?.color);
+  // 2ª cor da identidade (opcional) — cai na primária se não informada.
+  const color2 = opts.brand?.color2 ? safeColor(opts.brand.color2) : color;
   const logoUrl = safeUrl(opts.brand?.logoUrl);
   const brandMark = logoUrl
     ? `<img src="${logoUrl}" alt="" style="max-height:40px;max-width:180px">`
@@ -121,9 +134,9 @@ export function fakeFormPage(opts: { token: string; brand?: Brand }): string {
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     background:#eef1f6;color:#1f2937;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
   .card{background:#fff;width:100%;max-width:400px;border-radius:14px;padding:34px 30px 28px;
-    box-shadow:0 10px 30px rgba(17,24,39,.10);border:1px solid #e5e7eb}
+    box-shadow:0 10px 30px rgba(17,24,39,.10);border:1px solid #e5e7eb;border-top:3px solid ${color2}}
   .brand{display:flex;align-items:center;justify-content:center;margin-bottom:22px}
-  .mark{width:44px;height:44px;border-radius:12px;background:${color};display:flex;align-items:center;justify-content:center}
+  .mark{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${color},${color2});display:flex;align-items:center;justify-content:center}
   h1{font-size:20px;font-weight:600;margin:0 0 6px;text-align:center}
   .sub{font-size:14px;color:#6b7280;text-align:center;margin:0 0 22px;line-height:1.5}
   label{display:block;font-size:13px;font-weight:500;color:#374151;margin:14px 0 6px}

@@ -7,6 +7,7 @@ type Stage =
   | 'NOVO'
   | 'CONTATADO'
   | 'QUALIFICADO'
+  | 'TESTE'
   | 'PROPOSTA'
   | 'GANHO'
   | 'PERDIDO';
@@ -29,6 +30,7 @@ const STAGES: { key: Stage; label: string; tone: string }[] = [
   { key: 'NOVO', label: 'Novo', tone: 'blue' },
   { key: 'CONTATADO', label: 'Contatado', tone: 'amber' },
   { key: 'QUALIFICADO', label: 'Qualificado', tone: 'amber' },
+  { key: 'TESTE', label: 'Campanha Teste', tone: 'blue' },
   { key: 'PROPOSTA', label: 'Proposta', tone: 'amber' },
   { key: 'GANHO', label: 'Ganho', tone: 'green' },
   { key: 'PERDIDO', label: 'Perdido', tone: 'red' },
