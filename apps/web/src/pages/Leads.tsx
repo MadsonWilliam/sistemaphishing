@@ -18,11 +18,13 @@ interface Lead {
   company: string;
   email: string;
   phone?: string | null;
+  cnpj?: string | null;
   employees?: string | null;
   message?: string | null;
   notes?: string | null;
   stage: Stage;
   notified: boolean;
+  termSentAt?: string | null;
   createdAt: string;
 }
 
@@ -67,6 +69,15 @@ export function Leads() {
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['leads'] });
       // Mantém o modal aberto em sincronia com o dado salvo.
+      setDetail((d) => (d && d.id === updated.id ? updated : d));
+    },
+  });
+
+  const sendTerm = useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post<Lead>(`/leads/${id}/send-term`)).data,
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
       setDetail((d) => (d && d.id === updated.id ? updated : d));
     },
   });
@@ -258,6 +269,14 @@ export function Leads() {
           onStage={(stage) => move(detail.id, stage)}
           onSaveNotes={(notes) => patch.mutate({ id: detail.id, notes })}
           saving={patch.isPending}
+          onSendTerm={() => sendTerm.mutate(detail.id)}
+          termSending={sendTerm.isPending}
+          termError={
+            sendTerm.isError
+              ? ((sendTerm.error as { response?: { data?: { message?: string } } })
+                  ?.response?.data?.message ?? 'Falha ao enviar o termo.')
+              : null
+          }
         />
       )}
     </div>
@@ -270,14 +289,28 @@ function LeadDetail({
   onStage,
   onSaveNotes,
   saving,
+  onSendTerm,
+  termSending,
+  termError,
 }: {
   lead: Lead;
   onClose: () => void;
   onStage: (s: Stage) => void;
   onSaveNotes: (notes: string) => void;
   saving: boolean;
+  onSendTerm: () => void;
+  termSending: boolean;
+  termError: string | null;
 }) {
   const [notes, setNotes] = useState(lead.notes ?? '');
+  const fmtDateTime = (iso: string) =>
+    new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   return (
     <div
@@ -302,6 +335,7 @@ function LeadDetail({
               {lead.email}
             </a>
             {lead.phone ? ` · ${lead.phone}` : ''}
+            {lead.cnpj ? ` · CNPJ ${lead.cnpj}` : ''}
             {lead.employees ? ` · ${lead.employees} func.` : ''}
           </div>
 
@@ -318,6 +352,40 @@ function LeadDetail({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Termo de autorização — aceite por resposta ao e-mail */}
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-400">
+                Termo de autorização do teste
+              </div>
+              <Btn onClick={onSendTerm} disabled={termSending}>
+                {termSending
+                  ? 'Enviando…'
+                  : lead.termSentAt
+                    ? 'Reenviar termo'
+                    : 'Enviar termo'}
+              </Btn>
+            </div>
+            <div className="text-xs mt-2">
+              {lead.termSentAt ? (
+                <span className="text-emerald-400">
+                  Enviado em {fmtDateTime(lead.termSentAt)}
+                </span>
+              ) : (
+                <span className="text-slate-500">Ainda não enviado.</span>
+              )}
+            </div>
+            {termError && (
+              <div className="text-xs text-red-400 mt-1">{termError}</div>
+            )}
+            <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+              Envia o termo (com empresa, CNPJ, responsável e domínio) para{' '}
+              <strong>{lead.email}</strong>. O cliente autoriza{' '}
+              <strong>respondendo "De acordo"</strong> por e-mail — aí você move
+              o card para <strong>Campanha Teste</strong>.
+            </div>
           </div>
 
           <div className="mt-4">

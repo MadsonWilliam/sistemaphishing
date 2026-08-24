@@ -33,6 +33,11 @@ export class CreateLeadDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(25)
+  cnpj?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(40)
   employees?: string;
 

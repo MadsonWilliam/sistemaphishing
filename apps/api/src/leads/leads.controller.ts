@@ -40,4 +40,12 @@ export class LeadsController {
   update(@Param('id') id: string, @Body() dto: UpdateLeadDto) {
     return this.leads.update(id, dto);
   }
+
+  // Envia o termo de autorização ao cliente (aceite por resposta ao e-mail).
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/send-term')
+  @HttpCode(200)
+  sendTerm(@Param('id') id: string) {
+    return this.leads.sendTerm(id);
+  }
 }

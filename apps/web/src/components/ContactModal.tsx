@@ -27,6 +27,7 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
         company: f.get('company'),
         email: f.get('email'),
         phone: f.get('phone') || undefined,
+        cnpj: f.get('cnpj') || undefined,
         employees: f.get('employees') || undefined,
         message: f.get('message') || undefined,
         consent: f.get('consent') === 'on',
@@ -108,6 +109,9 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
               />
               <div className="grid sm:grid-cols-2 gap-3">
                 <Field name="phone" label="Telefone" placeholder="(00) 00000-0000" />
+                <Field name="cnpj" label="CNPJ" placeholder="00.000.000/0001-00" />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1.5">
                     Nº de funcionários
@@ -125,6 +129,7 @@ export function ContactModal({ onClose }: { onClose: () => void }) {
                     ))}
                   </select>
                 </div>
+                <div className="hidden sm:block" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1.5">

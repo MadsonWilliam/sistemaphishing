@@ -394,6 +394,7 @@ model Lead {
   company   String
   email     String
   phone     String?
+  cnpj      String? // CNPJ da empresa (usado no termo de autorização)
   employees String? // faixa de nº de funcionários (texto livre/opcional)
   message   String?
   source    String    @default("landing")
@@ -403,6 +404,8 @@ model Lead {
   notes     String?
   // Consentimento LGPD dado no formulário (marca o aceite dos termos).
   consentAt DateTime?
+  // Termo de autorização do teste de phishing enviado por e-mail ao cliente.
+  termSentAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

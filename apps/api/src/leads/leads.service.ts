@@ -4,8 +4,9 @@ import { DomainStatus, Lead } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomainsService } from '../domains/domains.service';
 import { SmtpTransportService } from '../mail/smtp-transport.service';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
+import { authorizationTermHtml, authorizationTermText } from './leads.term';
 
 // Escapa entrada do lead antes de interpolar no HTML do e-mail (anti-injeção).
 const esc = (s?: string | null): string =>
@@ -39,6 +40,7 @@ export class LeadsService {
         company: dto.company.trim(),
         email: dto.email.toLowerCase().trim(),
         phone: dto.phone?.trim() || null,
+        cnpj: dto.cnpj?.trim() || null,
         employees: dto.employees?.trim() || null,
         message: dto.message?.trim() || null,
         // Registra o momento do aceite dos termos (prova de consentimento LGPD).
@@ -78,6 +80,50 @@ export class LeadsService {
         // Permite limpar as anotações enviando string vazia.
         notes: dto.notes === undefined ? undefined : dto.notes.trim() || null,
       },
+    });
+  }
+
+  // Envia o TERMO DE AUTORIZAÇÃO ao cliente (aceite por resposta ao e-mail).
+  // Registra termSentAt. O operador move o estágio manualmente quando o cliente
+  // responder "De acordo".
+  async sendTerm(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) {
+      throw new NotFoundException('Lead não encontrado.');
+    }
+    const domain = await this.pickSendingDomain();
+    if (!domain) {
+      throw new BadRequestException(
+        'Nenhum domínio de envio verificado para enviar o termo.',
+      );
+    }
+    const cfg = this.domains.smtpConfigOf(domain);
+    const identity = await this.prisma.senderIdentity.findFirst({
+      where: { domainId: domain.id },
+      orderBy: { localPart: 'asc' },
+    });
+    const fromEmail = identity
+      ? `${identity.localPart}@${domain.domain}`
+      : `no-reply@${domain.domain}`;
+    try {
+      await this.smtp.send(cfg, {
+        fromEmail,
+        fromName: 'Nexium Solutions',
+        toEmail: lead.email,
+        toName: lead.name,
+        subject: `Autorização de simulação de phishing — ${lead.company}`,
+        html: authorizationTermHtml(lead),
+        text: authorizationTermText(lead),
+        // A resposta do cliente (aceite) vai para o contato comercial.
+        headers: { 'Reply-To': 'contato@nexiumsolutions.com.br' },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'falha no envio';
+      throw new BadRequestException(`Não foi possível enviar o termo: ${message}`);
+    }
+    return this.prisma.lead.update({
+      where: { id },
+      data: { termSentAt: new Date() },
     });
   }
 
