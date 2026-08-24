@@ -1,7 +1,8 @@
 // Biblioteca de iscas da plataforma (companyId = null). Baseada em vetores que
 // golpistas realmente usam, por setor / gatilho / dificuldade. Carregada no seed
-// (idempotente por nome). Placeholders disponíveis: {{nome}}, {{empresa}},
-// {{link}} (clique rastreado) e {{anexo}} (abertura de anexo rastreada).
+// (idempotente por nome). Placeholders: {{nome}}, {{empresa}}, {{email}} (e-mail
+// do destinatário), {{dominio}} (parte após o @), {{link}} (clique rastreado),
+// {{anexo}} (abertura de anexo rastreada) e {{qr}}.
 
 export type Sector =
   | 'FINANCEIRO'
@@ -40,7 +41,7 @@ const wrap = (inner: string, cta?: { label: string; href: string }) => `
       : ''
   }
   <hr style="border:none;border-top:1px solid #eaeaea;margin:24px 0">
-  <p style="color:#9aa0a6;font-size:12px">Esta mensagem foi enviada para {{nome}} da {{empresa}}. Se você não a reconhece, ignore-a.</p>
+  <p style="color:#9aa0a6;font-size:12px">Esta mensagem foi enviada para {{email}}. Se você não a reconhece, ignore-a.</p>
 </div>`;
 
 const fileCard = (name: string) => `
@@ -57,7 +58,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: '{{nome}}, identificamos uma fatura em aberto',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Consta em nosso sistema uma fatura da <strong>{{empresa}}</strong> vencida há 3 dias. Para evitar juros e negativação, emita a 2ª via e regularize hoje.</p>`,
+       <p>Consta em nosso sistema uma fatura em aberto vinculada ao e-mail <strong>{{email}}</strong>, vencida há 3 dias. Para evitar juros e negativação, emita a 2ª via e regularize hoje.</p>`,
       { label: 'Emitir 2ª via do boleto', href: '{{link}}' },
     ),
   },
@@ -66,7 +67,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     sector: 'CONTABILIDADE',
     trigger: 'ATTACHMENT',
     difficulty: 2,
-    subject: 'NF-e nº 04482 — {{empresa}}',
+    subject: 'NF-e nº 04482 — {{dominio}}',
     html: wrap(
       `<p>Prezado(a) {{nome}},</p>
        <p>Segue em anexo a nota fiscal eletrônica referente à sua última operação. O XML e o DANFE estão no arquivo abaixo.</p>
@@ -95,7 +96,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Intimação — Processo nº 0009123-45.2026',
     html: wrap(
       `<p>Prezado(a) {{nome}},</p>
-       <p>Você foi intimado(a) em processo que tramita contra a <strong>{{empresa}}</strong>. O prazo para manifestação é de 5 dias úteis. Acesse a íntegra no documento anexo.</p>
+       <p>Você foi intimado(a) em processo administrativo referente ao e-mail <strong>{{email}}</strong>. O prazo para manifestação é de 5 dias úteis. Acesse a íntegra no documento anexo.</p>
        ${fileCard('Intimacao_0009123.pdf')}
        <p><a href="{{anexo}}">Abrir intimação</a></p>`,
     ),
@@ -108,7 +109,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Um documento foi compartilhado com você',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Um documento foi compartilhado com você pela equipe de {{empresa}}. O acesso expira em 24 horas.</p>
+       <p>Um documento foi compartilhado com <strong>{{email}}</strong>. O acesso expira em 24 horas.</p>
        ${fileCard('Relatorio_Confidencial.pdf')}`,
       { label: 'Abrir documento', href: '{{link}}' },
     ),
@@ -121,7 +122,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: '{{nome}}, atualize seus dados até sexta-feira',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>O RH da {{empresa}} está atualizando o cadastro dos colaboradores. Confirme seus dados no portal para não ter o holerite bloqueado neste mês.</p>`,
+       <p>O RH está atualizando o cadastro dos colaboradores. Confirme os dados da conta <strong>{{email}}</strong> no portal para não ter o holerite bloqueado neste mês.</p>`,
       { label: 'Acessar portal do colaborador', href: '{{link}}' },
     ),
   },
@@ -133,7 +134,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Ação necessária: sua senha expira em 24h',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Por política de segurança da {{empresa}}, sua senha de rede expira em 24 horas. Renove agora para manter o acesso ao e-mail e aos sistemas.</p>`,
+       <p>Por política de segurança, a senha da conta <strong>{{email}}</strong> expira em 24 horas. Renove agora para manter o acesso ao e-mail e aos sistemas.</p>`,
       { label: 'Renovar minha senha', href: '{{link}}' },
     ),
   },
@@ -157,7 +158,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Sua encomenda está retida na transportadora',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Uma encomenda destinada à {{empresa}} está retida por endereço incompleto. Atualize os dados de entrega em até 48h para evitar a devolução.</p>`,
+       <p>Uma encomenda vinculada ao e-mail <strong>{{email}}</strong> está retida por endereço incompleto. Atualize os dados de entrega em até 48h para evitar a devolução.</p>`,
       { label: 'Atualizar endereço de entrega', href: '{{link}}' },
     ),
   },
@@ -169,7 +170,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Ata da reunião de diretoria — aprovar até hoje',
     html: wrap(
       `<p>Prezado(a) {{nome}},</p>
-       <p>Segue a ata da última reunião de diretoria da {{empresa}} para sua revisão e aprovação. Precisamos do seu aceite ainda hoje para prosseguir.</p>`,
+       <p>Segue a ata da última reunião de diretoria para sua revisão e aprovação. Precisamos do seu aceite ainda hoje para prosseguir.</p>`,
       { label: 'Revisar e aprovar ata', href: '{{link}}' },
     ),
   },
@@ -181,7 +182,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Falha na renovação da sua assinatura corporativa',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Não conseguimos renovar a assinatura corporativa da {{empresa}}. Atualize a forma de pagamento em 24h para não perder o acesso da equipe.</p>`,
+       <p>Não conseguimos renovar a assinatura corporativa vinculada a <strong>{{email}}</strong>. Atualize a forma de pagamento em 24h para não perder o acesso da equipe.</p>`,
       { label: 'Atualizar pagamento', href: '{{link}}' },
     ),
   },
@@ -207,7 +208,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: '{{nome}}, documento seguro disponível',
     html: wrap(
       `<p>Prezado(a) {{nome}},</p>
-       <p>Um documento seguro da {{empresa}} está disponível. Por segurança, o acesso é feito via QR — escaneie com o celular corporativo para abrir.</p>
+       <p>Um documento seguro está disponível para <strong>{{email}}</strong>. Por segurança, o acesso é feito via QR — escaneie com o celular corporativo para abrir.</p>
        <div style="text-align:center">{{qr}}</div>`,
     ),
   },
@@ -219,7 +220,7 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     subject: 'Ação necessária: reative sua autenticação (MFA)',
     html: wrap(
       `<p>Olá {{nome}},</p>
-       <p>Detectamos uma inconsistência na sua autenticação multifator. Para manter o acesso aos sistemas da {{empresa}}, reative o MFA escaneando o QR abaixo no seu app autenticador.</p>
+       <p>Detectamos uma inconsistência na autenticação multifator da conta <strong>{{email}}</strong>. Para manter o acesso aos sistemas, reative o MFA escaneando o QR abaixo no seu app autenticador.</p>
        <div style="text-align:center">{{qr}}</div>
        <p style="font-size:12px;color:#9aa0a6">O não cumprimento em 24h poderá suspender seu acesso.</p>`,
     ),

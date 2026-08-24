@@ -7,27 +7,32 @@ const prisma = new PrismaClient();
 // Carrega a biblioteca de iscas da plataforma (idempotente por nome).
 async function seedTemplates() {
   let created = 0;
+  let updated = 0;
   for (const t of TEMPLATE_LIBRARY) {
     const exists = await prisma.template.findFirst({
       where: { name: t.name, companyId: null },
       select: { id: true },
     });
-    if (exists) continue;
-    await prisma.template.create({
-      data: {
-        name: t.name,
-        sector: t.sector,
-        trigger: t.trigger,
-        difficulty: t.difficulty,
-        subject: t.subject,
-        html: t.html,
-        companyId: null,
-      },
-    });
-    created++;
+    const data = {
+      sector: t.sector,
+      trigger: t.trigger,
+      difficulty: t.difficulty,
+      subject: t.subject,
+      html: t.html,
+    };
+    if (exists) {
+      // Mantém as iscas da biblioteca sincronizadas com o código (assunto/html).
+      await prisma.template.update({ where: { id: exists.id }, data });
+      updated++;
+    } else {
+      await prisma.template.create({
+        data: { name: t.name, companyId: null, ...data },
+      });
+      created++;
+    }
   }
   console.log(
-    `[seed] Biblioteca de iscas: ${created} novo(s), ${TEMPLATE_LIBRARY.length} no total.`,
+    `[seed] Biblioteca de iscas: ${created} novo(s), ${updated} atualizado(s), ${TEMPLATE_LIBRARY.length} no total.`,
   );
 }
 

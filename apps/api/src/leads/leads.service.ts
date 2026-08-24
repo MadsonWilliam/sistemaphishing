@@ -6,7 +6,11 @@ import { DomainsService } from '../domains/domains.service';
 import { SmtpTransportService } from '../mail/smtp-transport.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
-import { authorizationTermHtml, authorizationTermText } from './leads.term';
+import {
+  authorizationTermHtml,
+  authorizationTermPdf,
+  authorizationTermText,
+} from './leads.term';
 
 // Escapa entrada do lead antes de interpolar no HTML do e-mail (anti-injeção).
 const esc = (s?: string | null): string =>
@@ -106,6 +110,7 @@ export class LeadsService {
       ? `${identity.localPart}@${domain.domain}`
       : `no-reply@${domain.domain}`;
     try {
+      const pdf = await authorizationTermPdf(lead);
       await this.smtp.send(cfg, {
         fromEmail,
         fromName: 'Nexium Solutions',
@@ -116,6 +121,13 @@ export class LeadsService {
         text: authorizationTermText(lead),
         // A resposta do cliente (aceite) vai para o contato comercial.
         headers: { 'Reply-To': 'contato@nexiumsolutions.com.br' },
+        attachments: [
+          {
+            filename: 'Termo-de-Autorizacao-NexGuard.pdf',
+            content: pdf,
+            contentType: 'application/pdf',
+          },
+        ],
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'falha no envio';

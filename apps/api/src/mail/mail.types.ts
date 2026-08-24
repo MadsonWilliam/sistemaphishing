@@ -17,6 +17,8 @@ export interface SendMailInput {
   text?: string;
   // Cabeçalhos extras (ex.: List-Unsubscribe, X-Campaign) — usados a partir da Sprint 2.
   headers?: Record<string, string>;
+  // Anexos (ex.: termo de autorização em PDF).
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }
 
 export interface SendMailResult {

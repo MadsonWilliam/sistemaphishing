@@ -1,4 +1,5 @@
 import { Lead } from '@prisma/client';
+import PDFDocument from 'pdfkit';
 
 const esc = (s?: string | null): string =>
   (s ?? '')
@@ -76,6 +77,94 @@ export function authorizationTermHtml(lead: Lead): string {
       <a href="mailto:contato@nexiumsolutions.com.br" style="color:#2563eb">contato@nexiumsolutions.com.br</a>.</p>
     </div>
   </div>`;
+}
+
+// PDF do termo (personalizado com os dados do cliente) para anexar ao e-mail.
+export function authorizationTermPdf(lead: Lead): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 56 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (c: Buffer) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const dom = emailDomain(lead.email);
+    const hoje = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const H1 = (t: string) =>
+      doc.moveDown(0.8).fontSize(12).font('Helvetica-Bold').text(t);
+    const P = (t: string) =>
+      doc.moveDown(0.3).fontSize(10.5).font('Helvetica').text(t, { align: 'justify' });
+    const row = (k: string, v?: string | null) =>
+      doc
+        .fontSize(10.5)
+        .font('Helvetica-Bold')
+        .text(k + ': ', { continued: true })
+        .font('Helvetica')
+        .text(v || '(a confirmar)');
+
+    doc
+      .fontSize(16)
+      .font('Helvetica-Bold')
+      .text('Termo de Autorização de Simulação de Phishing');
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('#555')
+      .text('NexGuard · Nexium Solutions — Política de Uso e Privacidade')
+      .fillColor('#000');
+
+    doc.moveDown(0.8);
+    row('Empresa', lead.company);
+    row('CNPJ', lead.cnpj);
+    row('Responsável', lead.name);
+    row('Telefone', lead.phone);
+    row('E-mail', lead.email);
+    row('Domínio a ser testado', '@' + dom);
+
+    H1('1. Objeto');
+    P(
+      `A Nexium Solutions, por meio da plataforma NexGuard, fica autorizada a conduzir simulações ` +
+        `de phishing controladas e educativas junto aos colaboradores da empresa ${lead.company}, ` +
+        `no domínio de e-mail @${dom}, com finalidade exclusiva de medir a vulnerabilidade e treinar as pessoas.`,
+    );
+    H1('2. Legitimidade e papéis (LGPD)');
+    P(
+      'A empresa contratante declara ter legitimidade para testar e conscientizar seus próprios colaboradores, ' +
+        'atuando como controladora dos dados; a Nexium Solutions atua como operadora, tratando os dados apenas ' +
+        'para executar o serviço.',
+    );
+    H1('3. Proteção dos dados');
+    P(
+      'O NexGuard nunca coleta nem armazena senhas reais — formulários simulados medem apenas a submissão, ' +
+        'descartando os valores digitados. São tratados somente os eventos de abertura, clique e submissão, ' +
+        'por colaborador, pelo tempo necessário à finalidade.',
+    );
+    H1('4. Vigência');
+    P(
+      'Esta autorização vigora a partir do aceite e pode ser revogada a qualquer momento por solicitação da contratante.',
+    );
+    H1('5. Aceite');
+    P(
+      'O aceite deste termo se dá pela resposta do responsável ao e-mail de envio, com a manifestação "De acordo", ' +
+        'servindo como aceite eletrônico.',
+    );
+
+    doc
+      .moveDown(1.5)
+      .fontSize(9)
+      .fillColor('#666')
+      .text(
+        `Documento gerado em ${hoje}. Minuta sujeita a revisão jurídica e complementação por contrato. ` +
+          `Contato: contato@nexiumsolutions.com.br`,
+      );
+
+    doc.end();
+  });
 }
 
 export function authorizationTermText(lead: Lead): string {

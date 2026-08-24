@@ -40,6 +40,32 @@ const clickSlugFor = (sector?: string | null): string =>
 // Abertura de "anexo": caminho de documento (marca ?a=1 = anexo no tracking).
 const ATTACH_SLUG = 'documento';
 
+// Segmentos fake de contexto por setor — deixam o link do hover mais realista
+// (ex.: /fatura/2via/boleto/NF-8842?id=<token>). O token vai no ?id=.
+const FAKE_CTX: Record<string, string> = {
+  FINANCEIRO: '2via/boleto',
+  CONTABILIDADE: '2via/nota-fiscal',
+  COMPRAS: 'pedido/renovacao',
+  RH: 'colaborador/atualizacao',
+  TI: 'verificacao/seguranca',
+  JURIDICO: 'processo/intimacao',
+  ADMINISTRATIVO: 'documento/comunicado',
+  DIRETORIA: 'ata/aprovacao',
+  LOGISTICA: 'entrega/rastreio',
+  GERAL: 'acesso/verificacao',
+};
+const fakeCtxFor = (sector?: string | null): string =>
+  (sector && FAKE_CTX[sector]) || 'acesso/verificacao';
+// Referência fake (nº de documento) por alvo, p/ o link parecer único e real.
+const fakeRef = (): string =>
+  `${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 89999)}`;
+
+// Domínio (parte após o @) do e-mail do destinatário.
+const emailDomainOf = (email: string): string => {
+  const at = email.lastIndexOf('@');
+  return at >= 0 ? email.slice(at + 1) : email;
+};
+
 @Injectable()
 export class CampaignsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CampaignsService.name);
@@ -256,10 +282,17 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private buildSubject(subject: string, name: string, company: string): string {
+  private buildSubject(
+    subject: string,
+    name: string,
+    company: string,
+    email: string,
+  ): string {
     return subject
       .replace(/{{\s*(nome|name)\s*}}/gi, name)
-      .replace(/{{\s*(empresa|company)\s*}}/gi, company);
+      .replace(/{{\s*(empresa|company)\s*}}/gi, company)
+      .replace(/{{\s*(email|e-mail)\s*}}/gi, email)
+      .replace(/{{\s*(dominio|domínio|domain)\s*}}/gi, emailDomainOf(email));
   }
 
   // Normaliza o domínio de link informado (aceita "host" ou "https://host").
@@ -281,21 +314,28 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     p: {
       name: string;
       company: string;
+      email: string;
       token: string;
       showReport: boolean;
       baseUrl: string;
-      clickSlug: string;
+      sector?: string | null;
     },
   ): string {
     const baseUrl = p.baseUrl;
-    // Caminhos críveis (ex.: /fatura/<token>) — mais convincentes no hover que
-    // /t/c/<token>. O clique continua rastreado igual (ver PhishLinkController).
-    const link = `${baseUrl}/${p.clickSlug}/${p.token}`;
-    const attachment = `${baseUrl}/${ATTACH_SLUG}/${p.token}?a=1`;
+    // Caminhos fake ricos por setor (ex.: /fatura/2via/boleto/2024-8842?id=<token>)
+    // — muito mais convincentes no hover. O token vai no ?id=; o clique é
+    // rastreado igual (ver PhishLinkController, que lê o ?id).
+    const slug = clickSlugFor(p.sector);
+    const ctx = fakeCtxFor(p.sector);
+    const ref = fakeRef();
+    const link = `${baseUrl}/${slug}/${ctx}/${ref}?id=${p.token}`;
+    const attachment = `${baseUrl}/${ATTACH_SLUG}/anexo/${ref}?id=${p.token}&a=1`;
     const qrImg = `<img src="${baseUrl}/t/q/${p.token}.png" width="200" height="200" alt="Escaneie para acessar" style="display:block;margin:8px 0">`;
     let html = templateHtml
       .replace(/{{\s*(nome|name)\s*}}/gi, escapeHtml(p.name))
       .replace(/{{\s*(empresa|company)\s*}}/gi, escapeHtml(p.company))
+      .replace(/{{\s*(email|e-mail)\s*}}/gi, escapeHtml(p.email))
+      .replace(/{{\s*(dominio|domínio|domain)\s*}}/gi, escapeHtml(emailDomainOf(p.email)))
       .replace(/{{\s*link\s*}}/gi, link)
       .replace(/{{\s*(anexo|attachment)\s*}}/gi, attachment)
       .replace(/{{\s*qr\s*}}/gi, qrImg);
@@ -368,14 +408,16 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
             campaign.template.subject,
             name,
             campaign.company.name,
+            t.toEmail,
           ),
           html: this.buildHtml(campaign.template.html, {
             name,
             company: campaign.company.name,
+            email: t.toEmail,
             token: t.token,
             showReport: campaign.showReportButton,
             baseUrl: base,
-            clickSlug: clickSlugFor(campaign.template.sector),
+            sector: campaign.template.sector,
           }),
           campaignId: campaign.id,
           campaignTargetId: t.id,

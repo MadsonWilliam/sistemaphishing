@@ -3,7 +3,6 @@ import {
   Get,
   Headers,
   Ip,
-  Param,
   Query,
   Res,
 } from '@nestjs/common';
@@ -12,11 +11,10 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { TrackingService } from './tracking.service';
 import { Public } from '../common/decorators/public.decorator';
 
-// Entradas de phishing com CAMINHO CRÍVEL (ex.: /fatura/<token>, /acesso/<token>)
-// — o que a vítima vê no hover fica muito mais convincente que /t/c/<token>.
-// Rotas na raiz, fora do prefixo /api e do SPA (ver exclusões em main.ts e
-// app.module.ts). Cada slug é uma rota literal → nunca colide com o SPA.
-// Todas registram um CLIQUE; ?a=1 marca como abertura de anexo.
+// Entradas de phishing com CAMINHO FAKE RICO (ex.: /fatura/2via/boleto/2024-8842
+// ?id=<token>) — o que a vítima vê no hover fica muito realista. O token vai no
+// ?id= e o caminho após o slug é livre (curinga). Rotas na raiz, fora do /api e
+// do SPA (exclusões em main.ts e app.module.ts). ?a=1 = abertura de anexo.
 @SkipThrottle()
 @Public()
 @Controller()
@@ -24,14 +22,14 @@ export class PhishLinkController {
   constructor(private readonly tracking: TrackingService) {}
 
   private async handle(
-    token: string,
+    id: string | undefined,
     attachment: boolean,
     ip: string,
     ua: string,
     res: Response,
   ) {
     const out = await this.tracking.trackClick(
-      token,
+      id ?? '',
       { ip, userAgent: ua },
       attachment,
     );
@@ -41,47 +39,47 @@ export class PhishLinkController {
     res.set('Content-Type', 'text/html; charset=utf-8').send(out.html);
   }
 
-  @Get('acesso/:token')
+  @Get('acesso/*')
   acesso(
-    @Param('token') token: string,
+    @Query('id') id: string,
     @Query('a') a: string,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
     @Res() res: Response,
   ) {
-    return this.handle(token, a === '1', ip, ua, res);
+    return this.handle(id, a === '1', ip, ua, res);
   }
 
-  @Get('portal/:token')
+  @Get('portal/*')
   portal(
-    @Param('token') token: string,
+    @Query('id') id: string,
     @Query('a') a: string,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
     @Res() res: Response,
   ) {
-    return this.handle(token, a === '1', ip, ua, res);
+    return this.handle(id, a === '1', ip, ua, res);
   }
 
-  @Get('fatura/:token')
+  @Get('fatura/*')
   fatura(
-    @Param('token') token: string,
+    @Query('id') id: string,
     @Query('a') a: string,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
     @Res() res: Response,
   ) {
-    return this.handle(token, a === '1', ip, ua, res);
+    return this.handle(id, a === '1', ip, ua, res);
   }
 
-  @Get('documento/:token')
+  @Get('documento/*')
   documento(
-    @Param('token') token: string,
+    @Query('id') id: string,
     @Query('a') a: string,
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
     @Res() res: Response,
   ) {
-    return this.handle(token, a === '1', ip, ua, res);
+    return this.handle(id, a === '1', ip, ua, res);
   }
 }

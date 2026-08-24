@@ -53,6 +53,7 @@ export class SmtpTransportService {
       html: msg.html,
       text: msg.text,
       headers: msg.headers,
+      attachments: msg.attachments,
     });
     return {
       messageId: info.messageId,
