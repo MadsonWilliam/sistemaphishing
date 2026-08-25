@@ -64,4 +64,28 @@ export class LeadsController {
   sendReport(@Param('id') id: string) {
     return this.leads.sendReport(id);
   }
+
+  // Estrutura de Campanha: pede ao cliente a lista de quem testar.
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/request-contacts')
+  @HttpCode(200)
+  requestContacts(@Param('id') id: string) {
+    return this.leads.requestContacts(id);
+  }
+
+  // Campanha Teste (automação): cria empresa + dispara demo p/ o próprio cliente.
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/demo-campaign')
+  @HttpCode(200)
+  demoCampaign(@Param('id') id: string) {
+    return this.leads.demoCampaign(id);
+  }
+
+  // Proposta: envia o e-mail comercial (plano/valor/condições).
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/send-proposal')
+  @HttpCode(200)
+  sendProposal(@Param('id') id: string) {
+    return this.leads.sendProposal(id);
+  }
 }

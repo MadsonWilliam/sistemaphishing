@@ -8,6 +8,7 @@ type Stage =
   | 'NOVO'
   | 'CONTATADO'
   | 'QUALIFICADO'
+  | 'ESTRUTURA_CAMPANHA'
   | 'TESTE'
   | 'PROPOSTA'
   | 'GANHO'
@@ -28,13 +29,18 @@ interface Lead {
   termSentAt?: string | null;
   createdCompanyId?: string | null;
   reportSentAt?: string | null;
+  contactsRequestedAt?: string | null;
+  proposalPlan?: string | null;
+  proposalValue?: string | null;
+  proposalConditions?: string | null;
+  proposalSentAt?: string | null;
   createdAt: string;
 }
 
 const STAGES: { key: Stage; label: string; tone: string }[] = [
   { key: 'NOVO', label: 'Novo', tone: 'blue' },
-  { key: 'CONTATADO', label: 'Contatado', tone: 'amber' },
   { key: 'QUALIFICADO', label: 'Qualificado', tone: 'amber' },
+  { key: 'ESTRUTURA_CAMPANHA', label: 'Estrutura de Campanha', tone: 'amber' },
   { key: 'TESTE', label: 'Campanha Teste', tone: 'blue' },
   { key: 'PROPOSTA', label: 'Proposta', tone: 'amber' },
   { key: 'GANHO', label: 'Ganho', tone: 'green' },
@@ -53,8 +59,8 @@ const fmtDate = (iso: string) =>
 // Sequência do pipeline e o próximo estágio (para o botão "Avançar").
 const STAGE_ORDER: Stage[] = [
   'NOVO',
-  'CONTATADO',
   'QUALIFICADO',
+  'ESTRUTURA_CAMPANHA',
   'TESTE',
   'PROPOSTA',
   'GANHO',
@@ -67,28 +73,33 @@ const nextStageOf = (s: Stage): Stage | null => {
 // Roteiro (o que fazer em cada etapa) — guia o operador pelo Kanban.
 const PLAYBOOK: Record<Stage, { titulo: string; passo: string }> = {
   NOVO: {
-    titulo: 'Revisar',
-    passo: 'Confira os dados do formulário e faça o primeiro contato.',
+    titulo: 'Revisar e qualificar',
+    passo:
+      'Confira os dados do formulário, valide o CNPJ/interesse e envie o termo de autorização.',
   },
   CONTATADO: {
     titulo: 'Qualificar',
-    passo:
-      'Valide o CNPJ e o interesse. Se fizer sentido, avance e envie o termo de autorização.',
+    passo: 'Valide o interesse e envie o termo de autorização.',
   },
   QUALIFICADO: {
     titulo: 'Enviar termo de autorização',
     passo:
-      'Envie o termo (abaixo). Quando o cliente responder "De acordo" por e-mail, avance para Campanha Teste — isso habilita rodar testes para ele.',
+      'Envie o termo (abaixo). Quando o cliente responder "De acordo" por e-mail, avance para Estrutura de Campanha.',
+  },
+  ESTRUTURA_CAMPANHA: {
+    titulo: 'Solicitar contatos ao cliente',
+    passo:
+      'Envie o e-mail pedindo nome, e-mail e setor de quem ele quer testar. Ao receber a lista, cadastre e avance para Campanha Teste.',
   },
   TESTE: {
     titulo: 'Rodar teste + enviar relatório',
     passo:
-      'Crie uma campanha para este cliente em "Campanhas". Depois, use o relatório para fidelizar e evoluir para Proposta.',
+      'Crie a empresa e a campanha (ou use a demo automática). Depois, use o relatório para fidelizar e evoluir para Proposta.',
   },
   PROPOSTA: {
-    titulo: 'Proposta / contrato',
+    titulo: 'Proposta comercial',
     passo:
-      'Apresente a proposta ou contrato/assinatura. Ao fechar, marque como Ganho.',
+      'Preencha plano, valor e condições abaixo e envie a proposta. Ao fechar, marque como Ganho.',
   },
   GANHO: {
     titulo: 'Cliente ativo 🎉',
@@ -113,7 +124,14 @@ export function Leads() {
   });
 
   const patch = useMutation({
-    mutationFn: async (v: { id: string; stage?: Stage; notes?: string }) => {
+    mutationFn: async (v: {
+      id: string;
+      stage?: Stage;
+      notes?: string;
+      proposalPlan?: string;
+      proposalValue?: string;
+      proposalConditions?: string;
+    }) => {
       // O id vai só na URL — enviar no corpo quebra o ValidationPipe
       // (forbidNonWhitelisted) e retorna 400.
       const { id, ...body } = v;
@@ -136,8 +154,15 @@ export function Leads() {
   });
 
   const clientAction = useMutation({
-    mutationFn: async (v: { id: string; kind: 'create-company' | 'send-report' }) =>
-      (await api.post<Lead>(`/leads/${v.id}/${v.kind}`)).data,
+    mutationFn: async (v: {
+      id: string;
+      kind:
+        | 'create-company'
+        | 'send-report'
+        | 'request-contacts'
+        | 'demo-campaign'
+        | 'send-proposal';
+    }) => (await api.post<Lead>(`/leads/${v.id}/${v.kind}`)).data,
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['leads'] });
       setDetail((d) => (d && d.id === updated.id ? updated : d));
@@ -348,6 +373,16 @@ export function Leads() {
           onSendReport={() =>
             clientAction.mutate({ id: detail.id, kind: 'send-report' })
           }
+          onRequestContacts={() =>
+            clientAction.mutate({ id: detail.id, kind: 'request-contacts' })
+          }
+          onDemoCampaign={() =>
+            clientAction.mutate({ id: detail.id, kind: 'demo-campaign' })
+          }
+          onSendProposal={() =>
+            clientAction.mutate({ id: detail.id, kind: 'send-proposal' })
+          }
+          onSaveProposal={(v) => patch.mutate({ id: detail.id, ...v })}
           clientPending={clientAction.isPending}
           clientError={clientAction.isError ? clientActionError ?? 'Falha.' : null}
         />
@@ -367,6 +402,10 @@ function LeadDetail({
   termError,
   onCreateCompany,
   onSendReport,
+  onRequestContacts,
+  onDemoCampaign,
+  onSendProposal,
+  onSaveProposal,
   clientPending,
   clientError,
 }: {
@@ -380,10 +419,21 @@ function LeadDetail({
   termError: string | null;
   onCreateCompany: () => void;
   onSendReport: () => void;
+  onRequestContacts: () => void;
+  onDemoCampaign: () => void;
+  onSendProposal: () => void;
+  onSaveProposal: (v: {
+    proposalPlan?: string;
+    proposalValue?: string;
+    proposalConditions?: string;
+  }) => void;
   clientPending: boolean;
   clientError: string | null;
 }) {
   const [notes, setNotes] = useState(lead.notes ?? '');
+  const [plan, setPlan] = useState(lead.proposalPlan ?? '');
+  const [value, setValue] = useState(lead.proposalValue ?? '');
+  const [conditions, setConditions] = useState(lead.proposalConditions ?? '');
   const fmtDateTime = (iso: string) =>
     new Date(iso).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -519,20 +569,66 @@ function LeadDetail({
             </div>
           </div>
 
-          {/* Cliente / testes — criar empresa + enviar relatório */}
+          {/* Estrutura de Campanha — pedir contatos ao cliente */}
+          <div
+            className={`mt-4 rounded-lg border p-3 ${
+              lead.stage === 'ESTRUTURA_CAMPANHA' && !lead.contactsRequestedAt
+                ? 'border-brand-500/50 bg-brand-500/[0.06]'
+                : 'border-slate-800 bg-slate-950'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-300 font-medium">
+                📋 Contatos do teste
+              </div>
+              <Btn
+                onClick={onRequestContacts}
+                disabled={clientPending}
+                variant={lead.contactsRequestedAt ? 'ghost' : 'primary'}
+              >
+                {clientPending
+                  ? 'Enviando…'
+                  : lead.contactsRequestedAt
+                    ? 'Reenviar solicitação'
+                    : 'Solicitar contatos ao cliente'}
+              </Btn>
+            </div>
+            <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+              Envia um e-mail pedindo <strong>nome, e-mail e setor</strong> de quem
+              o cliente quer testar (para você cadastrar e disparar a campanha).
+              {lead.contactsRequestedAt && (
+                <span className="text-emerald-400">
+                  {' '}
+                  Solicitado em {fmtDateTime(lead.contactsRequestedAt)}.
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Cliente / testes — criar empresa + demo + relatório */}
           <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
             <div className="text-xs text-slate-300 font-medium mb-2">
               🏢 Cliente e testes
             </div>
             {!lead.createdCompanyId ? (
               <div>
-                <Btn onClick={onCreateCompany} disabled={clientPending}>
-                  {clientPending ? 'Criando…' : 'Criar empresa do cliente'}
-                </Btn>
+                <div className="flex flex-wrap gap-2">
+                  <Btn onClick={onCreateCompany} disabled={clientPending}>
+                    {clientPending ? 'Criando…' : 'Criar empresa do cliente'}
+                  </Btn>
+                  <Btn
+                    variant="ghost"
+                    onClick={onDemoCampaign}
+                    disabled={clientPending}
+                  >
+                    Disparar demo automática
+                  </Btn>
+                </div>
                 <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
-                  Cria a empresa <strong>{lead.company}</strong> (com o CNPJ) para
-                  você <strong>rodar campanhas</strong> para ela. Faça após o
-                  aceite do termo.
+                  "Criar empresa" cria <strong>{lead.company}</strong> (com CNPJ)
+                  para você rodar campanhas. "Demo automática" cria a empresa{' '}
+                  <strong>e dispara uma isca financeira para o próprio cliente</strong>{' '}
+                  ({lead.email}) experimentar o teste.
                 </div>
               </div>
             ) : (
@@ -544,6 +640,13 @@ function LeadDetail({
                   <Link to="/campaigns/new">
                     <Btn variant="ghost">Criar campanha</Btn>
                   </Link>
+                  <Btn
+                    variant="ghost"
+                    onClick={onDemoCampaign}
+                    disabled={clientPending}
+                  >
+                    Demo automática
+                  </Btn>
                   <Btn onClick={onSendReport} disabled={clientPending}>
                     {clientPending
                       ? 'Enviando…'
@@ -569,6 +672,92 @@ function LeadDetail({
               <div className="text-xs text-red-400 mt-2">{clientError}</div>
             )}
           </div>
+
+          {/* Proposta comercial — só na etapa Proposta */}
+          {lead.stage === 'PROPOSTA' && (
+            <div className="mt-4 rounded-lg border border-brand-500/40 bg-brand-500/[0.06] p-3">
+              <div className="text-xs text-brand-300 font-semibold mb-2">
+                💼 Proposta comercial
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="block text-[11px] text-slate-400 mb-1">
+                    Plano
+                  </span>
+                  <select
+                    value={plan}
+                    onChange={(e) => setPlan(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+                  >
+                    <option value="">Selecione…</option>
+                    <option value="Essencial — até 2 testes/mês">
+                      Essencial — até 2 testes/mês
+                    </option>
+                    <option value="Ilimitado — testes ilimitados + outros domínios">
+                      Ilimitado — ilimitado + outros domínios
+                    </option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="block text-[11px] text-slate-400 mb-1">
+                    Valor
+                  </span>
+                  <input
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    placeholder="R$ 1.200/mês"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+                  />
+                </label>
+              </div>
+              <label className="block mt-2">
+                <span className="block text-[11px] text-slate-400 mb-1">
+                  Condições (opcional)
+                </span>
+                <textarea
+                  value={conditions}
+                  onChange={(e) => setConditions(e.target.value)}
+                  rows={2}
+                  placeholder="Ex.: fidelidade 6 meses, setup incluído, suporte por e-mail…"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none resize-none"
+                />
+              </label>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Btn
+                  variant="ghost"
+                  onClick={() =>
+                    onSaveProposal({
+                      proposalPlan: plan,
+                      proposalValue: value,
+                      proposalConditions: conditions,
+                    })
+                  }
+                  disabled={saving}
+                >
+                  {saving ? 'Salvando…' : 'Salvar'}
+                </Btn>
+                <Btn
+                  onClick={onSendProposal}
+                  disabled={clientPending || !plan || !value}
+                >
+                  {clientPending
+                    ? 'Enviando…'
+                    : lead.proposalSentAt
+                      ? 'Reenviar proposta'
+                      : 'Enviar proposta'}
+                </Btn>
+                {lead.proposalSentAt && (
+                  <span className="text-[11px] text-emerald-400">
+                    Enviada em {fmtDateTime(lead.proposalSentAt)}
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-600 mt-1">
+                Salve antes de enviar. O e-mail comercial vai para{' '}
+                <strong>{lead.email}</strong>.
+              </div>
+            </div>
+          )}
 
           <div className="mt-4">
             <div className="text-xs text-slate-500 mb-1">Mensagem do prospect</div>

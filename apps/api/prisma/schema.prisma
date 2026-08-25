@@ -380,8 +380,9 @@ model AuthorizationConsent {
 // perder um contato mesmo se a notificação por e-mail falhar.
 enum LeadStage {
   NOVO
-  CONTATADO
+  CONTATADO // legado — fora do fluxo novo (oculto no front, migrado p/ QUALIFICADO)
   QUALIFICADO
+  ESTRUTURA_CAMPANHA // solicitar contatos (nome/e-mail/setor) ao cliente
   TESTE // liberado p/ 1ª campanha de avaliação do ambiente
   PROPOSTA
   GANHO
@@ -410,6 +411,13 @@ model Lead {
   createdCompanyId String?
   // Relatório da campanha enviado ao cliente (fidelização).
   reportSentAt DateTime?
+  // Solicitação de contatos (quem testar) enviada ao cliente.
+  contactsRequestedAt DateTime?
+  // Proposta comercial (preenchida pelo operador na etapa Proposta).
+  proposalPlan       String? // ex.: "2 testes/mês" | "ilimitado + outros domínios"
+  proposalValue      String? // valor (texto livre, ex.: "R$ 1.200/mês")
+  proposalConditions String?
+  proposalSentAt     DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

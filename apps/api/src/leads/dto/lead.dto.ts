@@ -57,7 +57,8 @@ export class CreateLeadDto {
   website?: string;
 }
 
-// Atualização manual pelo operador (mini-CRM): avançar estágio e/ou anotar.
+// Atualização manual pelo operador (mini-CRM): avançar estágio, anotar e
+// preencher a proposta comercial.
 export class UpdateLeadDto {
   @IsOptional()
   @IsEnum(LeadStage, { message: 'Estágio inválido.' })
@@ -67,4 +68,19 @@ export class UpdateLeadDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  proposalPlan?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  proposalValue?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  proposalConditions?: string;
 }

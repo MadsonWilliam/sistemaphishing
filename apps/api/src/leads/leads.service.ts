@@ -12,6 +12,13 @@ import {
   authorizationTermPdf,
   authorizationTermText,
 } from './leads.term';
+import {
+  proposalHtml,
+  proposalText,
+  requestContactsHtml,
+  requestContactsText,
+} from './leads.emails';
+import { SendMailInput } from '../mail/mail.types';
 
 // Escapa entrada do lead antes de interpolar no HTML do e-mail (anti-injeção).
 const esc = (s?: string | null): string =>
@@ -85,6 +92,14 @@ export class LeadsService {
         stage: dto.stage ?? undefined,
         // Permite limpar as anotações enviando string vazia.
         notes: dto.notes === undefined ? undefined : dto.notes.trim() || null,
+        proposalPlan:
+          dto.proposalPlan === undefined ? undefined : dto.proposalPlan.trim() || null,
+        proposalValue:
+          dto.proposalValue === undefined ? undefined : dto.proposalValue.trim() || null,
+        proposalConditions:
+          dto.proposalConditions === undefined
+            ? undefined
+            : dto.proposalConditions.trim() || null,
       },
     });
   }
@@ -226,6 +241,142 @@ export class LeadsService {
     return this.prisma.lead.update({
       where: { id },
       data: { reportSentAt: new Date() },
+    });
+  }
+
+  // Envio de e-mail ao lead a partir de um domínio verificado (Reply-To comercial).
+  private async mailToLead(
+    lead: Lead,
+    msg: Pick<SendMailInput, 'subject' | 'html' | 'text' | 'attachments'>,
+  ): Promise<void> {
+    const domain = await this.pickSendingDomain();
+    if (!domain) {
+      throw new BadRequestException('Nenhum domínio de envio verificado.');
+    }
+    const cfg = this.domains.smtpConfigOf(domain);
+    const identity = await this.prisma.senderIdentity.findFirst({
+      where: { domainId: domain.id },
+      orderBy: { localPart: 'asc' },
+    });
+    const fromEmail = identity
+      ? `${identity.localPart}@${domain.domain}`
+      : `no-reply@${domain.domain}`;
+    await this.smtp.send(cfg, {
+      fromEmail,
+      fromName: 'Nexium Solutions',
+      toEmail: lead.email,
+      toName: lead.name,
+      headers: { 'Reply-To': 'contato@nexiumsolutions.com.br' },
+      ...msg,
+    });
+  }
+
+  // ETAPA "Estrutura de Campanha": pede ao cliente a lista de quem testar.
+  async requestContacts(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead não encontrado.');
+    await this.mailToLead(lead, {
+      subject: `Vamos configurar seu teste — ${lead.company}`,
+      html: requestContactsHtml(lead),
+      text: requestContactsText(lead),
+    });
+    return this.prisma.lead.update({
+      where: { id },
+      data: { contactsRequestedAt: new Date() },
+    });
+  }
+
+  // ETAPA "Campanha Teste" (automação): cria a empresa (se preciso) e dispara
+  // uma campanha demo (isca financeira, remetente contábil) para o e-mail do
+  // PRÓPRIO cliente — ele experimenta o teste na pele. Caminho principal segue
+  // manual (lista real de colaboradores).
+  async demoCampaign(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead não encontrado.');
+
+    let companyId = lead.createdCompanyId ?? null;
+    if (companyId) {
+      const ex = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { id: true },
+      });
+      if (!ex) companyId = null;
+    }
+    if (!companyId) {
+      const company = await this.prisma.company.create({
+        data: {
+          name: lead.company,
+          cnpj: lead.cnpj ?? undefined,
+          status: CompanyStatus.PROSPECT,
+        },
+        select: { id: true },
+      });
+      companyId = company.id;
+      await this.prisma.lead.update({
+        where: { id },
+        data: { createdCompanyId: companyId },
+      });
+    }
+
+    const template = await this.prisma.template.findFirst({
+      where: { sector: 'FINANCEIRO', companyId: null },
+      select: { id: true },
+    });
+    if (!template) {
+      throw new BadRequestException('Nenhuma isca financeira disponível.');
+    }
+    // Remetente: prefere um domínio verificado "contábil"; senão, qualquer verificado.
+    const domains = await this.prisma.sendingDomain.findMany({
+      where: { status: DomainStatus.VERIFIED },
+      include: { identities: { where: { isActive: true }, take: 1 } },
+    });
+    const withId = domains.filter((d) => d.identities.length > 0);
+    const chosen =
+      withId.find((d) => /contabil/i.test(d.domain)) ?? withId[0];
+    if (!chosen) {
+      throw new BadRequestException(
+        'Nenhum remetente verificado com identidade para disparar.',
+      );
+    }
+    const identityId = chosen.identities[0].id;
+
+    const campaign = await this.campaigns.create({
+      companyId,
+      name: `Demo automática — ${lead.company}`,
+      templateId: template.id,
+      postClickBehavior: 'FORM',
+      showReportButton: true,
+      microTraining: true,
+      recipients: [
+        {
+          email: lead.email,
+          name: lead.name,
+          department: 'Financeiro',
+        },
+      ],
+    } as never);
+    await this.campaigns.send(campaign.id, { senderIdentityIds: [identityId] });
+
+    return this.prisma.lead.findUniqueOrThrow({ where: { id } });
+  }
+
+  // ETAPA "Proposta": envia o e-mail comercial com plano/valor/condições.
+  async sendProposal(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead não encontrado.');
+    if (!lead.proposalPlan || !lead.proposalValue) {
+      throw new BadRequestException(
+        'Preencha o plano e o valor da proposta antes de enviar.',
+      );
+    }
+    await this.mailToLead(lead, {
+      subject: `Proposta NexGuard — ${lead.company}`,
+      html: proposalHtml(lead),
+      text: proposalText(lead),
+    });
+    return this.prisma.lead.update({
+      where: { id },
+      data: { proposalSentAt: new Date() },
     });
   }
 
