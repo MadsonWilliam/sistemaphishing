@@ -38,6 +38,9 @@ export const envSchema = z.object({
   // opcional do Teams (deixado em STANDBY — só dispara se a URL for definida).
   LEADS_TO: z.string().email().default('contato@nexiumsolutions.com.br'),
   LEADS_TEAMS_WEBHOOK_URL: z.string().url().optional(),
+  // Domínio institucional para e-mails INTERNOS (notificação de lead, termo,
+  // proposta, relatório). Reserva os domínios-isca só para campanhas de clientes.
+  INTERNAL_SENDING_DOMAIN: z.string().default('rsweb.net.br'),
 });
 
 export type Env = z.infer<typeof envSchema>;

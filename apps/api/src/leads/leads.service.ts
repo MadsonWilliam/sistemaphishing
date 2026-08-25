@@ -427,17 +427,20 @@ export class LeadsService {
   }
 
   // Prefere um domínio VERIFIED; se não houver, usa qualquer um cadastrado.
+  // E-mails INTERNOS (notificação de lead, termo, proposta, relatório) saem pelo
+  // domínio institucional (rsweb) — nunca pelos domínios-isca, reservados a
+  // campanhas de clientes. Fallback: qualquer verificado, se o rsweb não existir.
   private async pickSendingDomain() {
-    const verified = await this.prisma.sendingDomain.findFirst({
-      where: { status: DomainStatus.VERIFIED },
-      orderBy: { createdAt: 'desc' },
+    const preferred =
+      this.config.get<string>('INTERNAL_SENDING_DOMAIN') ?? 'rsweb.net.br';
+    const institutional = await this.prisma.sendingDomain.findFirst({
+      where: { domain: preferred, status: DomainStatus.VERIFIED },
     });
-    return (
-      verified ??
-      (await this.prisma.sendingDomain.findFirst({
-        orderBy: { createdAt: 'desc' },
-      }))
-    );
+    if (institutional) return institutional;
+    return this.prisma.sendingDomain.findFirst({
+      where: { status: DomainStatus.VERIFIED },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   private emailHtml(lead: Lead): string {
