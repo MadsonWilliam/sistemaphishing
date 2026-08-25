@@ -47,6 +47,56 @@ const fmtDate = (iso: string) =>
     year: '2-digit',
   });
 
+// Sequência do pipeline e o próximo estágio (para o botão "Avançar").
+const STAGE_ORDER: Stage[] = [
+  'NOVO',
+  'CONTATADO',
+  'QUALIFICADO',
+  'TESTE',
+  'PROPOSTA',
+  'GANHO',
+];
+const nextStageOf = (s: Stage): Stage | null => {
+  const i = STAGE_ORDER.indexOf(s);
+  return i >= 0 && i < STAGE_ORDER.length - 1 ? STAGE_ORDER[i + 1] : null;
+};
+
+// Roteiro (o que fazer em cada etapa) — guia o operador pelo Kanban.
+const PLAYBOOK: Record<Stage, { titulo: string; passo: string }> = {
+  NOVO: {
+    titulo: 'Revisar',
+    passo: 'Confira os dados do formulário e faça o primeiro contato.',
+  },
+  CONTATADO: {
+    titulo: 'Qualificar',
+    passo:
+      'Valide o CNPJ e o interesse. Se fizer sentido, avance e envie o termo de autorização.',
+  },
+  QUALIFICADO: {
+    titulo: 'Enviar termo de autorização',
+    passo:
+      'Envie o termo (abaixo). Quando o cliente responder "De acordo" por e-mail, avance para Campanha Teste — isso habilita rodar testes para ele.',
+  },
+  TESTE: {
+    titulo: 'Rodar teste + enviar relatório',
+    passo:
+      'Crie uma campanha para este cliente em "Campanhas". Depois, use o relatório para fidelizar e evoluir para Proposta.',
+  },
+  PROPOSTA: {
+    titulo: 'Proposta / contrato',
+    passo:
+      'Apresente a proposta ou contrato/assinatura. Ao fechar, marque como Ganho.',
+  },
+  GANHO: {
+    titulo: 'Cliente ativo 🎉',
+    passo: 'Onboarding concluído — cliente fechado.',
+  },
+  PERDIDO: {
+    titulo: 'Encerrado',
+    passo: 'Lead marcado como perdido.',
+  },
+};
+
 export function Leads() {
   const qc = useQueryClient();
   const [view, setView] = useState<'lista' | 'kanban'>('kanban');
@@ -318,7 +368,7 @@ function LeadDetail({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg p-6 relative rounded-xl border border-slate-800 bg-slate-900"
+        className="w-full max-w-lg p-6 relative rounded-xl border border-slate-800 bg-slate-900 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div>
@@ -328,37 +378,87 @@ function LeadDetail({
           >
             ✕
           </button>
-          <div className="text-lg font-semibold">{lead.company}</div>
-          <div className="text-slate-400 text-sm">{lead.name}</div>
-          <div className="text-sm text-slate-500 mt-1">
-            <a className="hover:text-brand-400" href={`mailto:${lead.email}`}>
-              {lead.email}
-            </a>
-            {lead.phone ? ` · ${lead.phone}` : ''}
-            {lead.cnpj ? ` · CNPJ ${lead.cnpj}` : ''}
-            {lead.employees ? ` · ${lead.employees} func.` : ''}
+          <div className="text-lg font-semibold pr-8">{lead.company}</div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-slate-400 text-sm">{lead.name}</span>
+            <Badge tone={toneOf(lead.stage)}>{labelOf(lead.stage)}</Badge>
           </div>
 
+          {/* Próximo passo (roteiro por etapa) */}
+          <div className="mt-4 rounded-lg border border-brand-500/30 bg-brand-500/[0.06] p-3">
+            <div className="text-xs text-brand-300 font-semibold mb-0.5">
+              Próximo passo · {PLAYBOOK[lead.stage].titulo}
+            </div>
+            <div className="text-xs text-slate-300 leading-relaxed">
+              {PLAYBOOK[lead.stage].passo}
+            </div>
+          </div>
+
+          {/* Todos os dados do formulário */}
           <div className="mt-4">
-            <div className="text-xs text-slate-500 mb-1">Estágio</div>
-            <select
-              value={lead.stage}
-              onChange={(e) => onStage(e.target.value as Stage)}
-              className="bg-slate-950 border border-slate-700 rounded-lg text-sm px-3 py-2 focus:border-brand-500 outline-none"
-            >
-              {STAGES.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
+            <div className="text-xs text-slate-500 mb-1.5">
+              Dados do formulário
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-slate-800 bg-slate-950 p-3">
+              {(
+                [
+                  ['Empresa', lead.company],
+                  ['CNPJ', lead.cnpj],
+                  ['Responsável', lead.name],
+                  ['Telefone', lead.phone],
+                  ['E-mail', lead.email],
+                  ['Funcionários', lead.employees],
+                  ['Recebido', fmtDate(lead.createdAt)],
+                ] as [string, string | null | undefined][]
+              ).map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <div className="text-[11px] text-slate-500">{k}</div>
+                  <div className="text-slate-200 truncate" title={v || undefined}>
+                    {v || '—'}
+                  </div>
+                </div>
               ))}
-            </select>
+            </div>
+          </div>
+
+          {/* Estágio + avançar */}
+          <div className="mt-4 flex items-end gap-2">
+            <div>
+              <div className="text-xs text-slate-500 mb-1">Estágio</div>
+              <select
+                value={lead.stage}
+                onChange={(e) => onStage(e.target.value as Stage)}
+                className="bg-slate-950 border border-slate-700 rounded-lg text-sm px-3 py-2 focus:border-brand-500 outline-none"
+              >
+                {STAGES.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {nextStageOf(lead.stage) && (
+              <Btn
+                variant="ghost"
+                onClick={() => onStage(nextStageOf(lead.stage) as Stage)}
+              >
+                Avançar → {labelOf(nextStageOf(lead.stage) as Stage)}
+              </Btn>
+            )}
           </div>
 
           {/* Termo de autorização — aceite por resposta ao e-mail */}
-          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
+          <div
+            className={`mt-4 rounded-lg border p-3 ${
+              !lead.termSentAt &&
+              (lead.stage === 'QUALIFICADO' || lead.stage === 'CONTATADO')
+                ? 'border-brand-500/50 bg-brand-500/[0.06]'
+                : 'border-slate-800 bg-slate-950'
+            }`}
+          >
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-slate-400">
-                Termo de autorização do teste
+              <div className="text-xs text-slate-300 font-medium">
+                📄 Termo de autorização do teste
               </div>
               <Btn onClick={onSendTerm} disabled={termSending}>
                 {termSending
