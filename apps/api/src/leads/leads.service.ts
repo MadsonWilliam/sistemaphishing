@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DomainStatus, Lead } from '@prisma/client';
+import { CompanyStatus, DomainStatus, Lead } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomainsService } from '../domains/domains.service';
+import { CampaignsService } from '../campaigns/campaigns.service';
 import { SmtpTransportService } from '../mail/smtp-transport.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
@@ -27,6 +28,7 @@ export class LeadsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly domains: DomainsService,
+    private readonly campaigns: CampaignsService,
     private readonly smtp: SmtpTransportService,
     private readonly config: ConfigService,
   ) {}
@@ -136,6 +138,94 @@ export class LeadsService {
     return this.prisma.lead.update({
       where: { id },
       data: { termSentAt: new Date() },
+    });
+  }
+
+  // Cria a Empresa (tenant) a partir do lead — sem login/portal por ora. Isso
+  // habilita rodar campanhas para esse cliente. Idempotente por lead.
+  async createCompany(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead não encontrado.');
+    if (lead.createdCompanyId) {
+      const ex = await this.prisma.company.findUnique({
+        where: { id: lead.createdCompanyId },
+        select: { id: true },
+      });
+      if (ex) {
+        throw new BadRequestException('Empresa já criada para este lead.');
+      }
+    }
+    const company = await this.prisma.company.create({
+      data: {
+        name: lead.company,
+        cnpj: lead.cnpj ?? undefined,
+        status: CompanyStatus.PROSPECT,
+      },
+      select: { id: true },
+    });
+    return this.prisma.lead.update({
+      where: { id },
+      data: { createdCompanyId: company.id },
+    });
+  }
+
+  // Envia o relatório da última campanha do cliente por e-mail (fidelização).
+  async sendReport(id: string): Promise<Lead> {
+    const lead = await this.prisma.lead.findUnique({ where: { id } });
+    if (!lead) throw new NotFoundException('Lead não encontrado.');
+    if (!lead.createdCompanyId) {
+      throw new BadRequestException(
+        'Crie a empresa do cliente antes (botão "Criar empresa").',
+      );
+    }
+    const campaign = await this.prisma.campaign.findFirst({
+      where: { companyId: lead.createdCompanyId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true },
+    });
+    if (!campaign) {
+      throw new BadRequestException(
+        'Nenhuma campanha para este cliente ainda — rode uma campanha antes.',
+      );
+    }
+    const { url } = await this.campaigns.share(campaign.id);
+
+    const domain = await this.pickSendingDomain();
+    if (!domain) {
+      throw new BadRequestException('Nenhum domínio de envio verificado.');
+    }
+    const cfg = this.domains.smtpConfigOf(domain);
+    const identity = await this.prisma.senderIdentity.findFirst({
+      where: { domainId: domain.id },
+      orderBy: { localPart: 'asc' },
+    });
+    const fromEmail = identity
+      ? `${identity.localPart}@${domain.domain}`
+      : `no-reply@${domain.domain}`;
+    const nome = esc(lead.name);
+    await this.smtp.send(cfg, {
+      fromEmail,
+      fromName: 'Nexium Solutions',
+      toEmail: lead.email,
+      toName: lead.name,
+      subject: `Relatório da simulação de phishing — ${lead.company}`,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#0f172a;font-size:15px;line-height:1.6">
+        <p>Olá ${nome},</p>
+        <p>Concluímos a simulação de phishing de conscientização na <strong>${esc(lead.company)}</strong>.
+        O relatório executivo — com taxa de comprometimento, recorte por setor e boas práticas
+        recomendadas — está disponível no link abaixo:</p>
+        <p style="text-align:center;margin:26px 0">
+          <a href="${url}" style="background:#1a73e8;color:#fff;text-decoration:none;padding:12px 30px;border-radius:6px;display:inline-block;font-weight:bold">Ver relatório da campanha</a>
+        </p>
+        <p style="font-size:13px;color:#64748b">Este relatório é confidencial. Podemos agendar uma
+        conversa para revisar os resultados e o plano de evolução. Basta responder este e-mail.</p>
+      </div>`,
+      text: `Relatório da simulação de phishing — ${lead.company}\n\nAcesse: ${url}`,
+      headers: { 'Reply-To': 'contato@nexiumsolutions.com.br' },
+    });
+    return this.prisma.lead.update({
+      where: { id },
+      data: { reportSentAt: new Date() },
     });
   }
 

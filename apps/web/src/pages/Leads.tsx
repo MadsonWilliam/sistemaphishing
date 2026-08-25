@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Badge, Btn, Card, PageHeader } from '../components/ui';
@@ -25,6 +26,8 @@ interface Lead {
   stage: Stage;
   notified: boolean;
   termSentAt?: string | null;
+  createdCompanyId?: string | null;
+  reportSentAt?: string | null;
   createdAt: string;
 }
 
@@ -131,6 +134,18 @@ export function Leads() {
       setDetail((d) => (d && d.id === updated.id ? updated : d));
     },
   });
+
+  const clientAction = useMutation({
+    mutationFn: async (v: { id: string; kind: 'create-company' | 'send-report' }) =>
+      (await api.post<Lead>(`/leads/${v.id}/${v.kind}`)).data,
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      setDetail((d) => (d && d.id === updated.id ? updated : d));
+    },
+  });
+  const clientActionError = (
+    clientAction.error as { response?: { data?: { message?: string } } }
+  )?.response?.data?.message;
 
   const all = leads.data ?? [];
   const counts = STAGES.reduce<Record<string, number>>((acc, s) => {
@@ -327,6 +342,14 @@ export function Leads() {
                   ?.response?.data?.message ?? 'Falha ao enviar o termo.')
               : null
           }
+          onCreateCompany={() =>
+            clientAction.mutate({ id: detail.id, kind: 'create-company' })
+          }
+          onSendReport={() =>
+            clientAction.mutate({ id: detail.id, kind: 'send-report' })
+          }
+          clientPending={clientAction.isPending}
+          clientError={clientAction.isError ? clientActionError ?? 'Falha.' : null}
         />
       )}
     </div>
@@ -342,6 +365,10 @@ function LeadDetail({
   onSendTerm,
   termSending,
   termError,
+  onCreateCompany,
+  onSendReport,
+  clientPending,
+  clientError,
 }: {
   lead: Lead;
   onClose: () => void;
@@ -351,6 +378,10 @@ function LeadDetail({
   onSendTerm: () => void;
   termSending: boolean;
   termError: string | null;
+  onCreateCompany: () => void;
+  onSendReport: () => void;
+  clientPending: boolean;
+  clientError: string | null;
 }) {
   const [notes, setNotes] = useState(lead.notes ?? '');
   const fmtDateTime = (iso: string) =>
@@ -486,6 +517,57 @@ function LeadDetail({
               <strong>respondendo "De acordo"</strong> por e-mail — aí você move
               o card para <strong>Campanha Teste</strong>.
             </div>
+          </div>
+
+          {/* Cliente / testes — criar empresa + enviar relatório */}
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <div className="text-xs text-slate-300 font-medium mb-2">
+              🏢 Cliente e testes
+            </div>
+            {!lead.createdCompanyId ? (
+              <div>
+                <Btn onClick={onCreateCompany} disabled={clientPending}>
+                  {clientPending ? 'Criando…' : 'Criar empresa do cliente'}
+                </Btn>
+                <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                  Cria a empresa <strong>{lead.company}</strong> (com o CNPJ) para
+                  você <strong>rodar campanhas</strong> para ela. Faça após o
+                  aceite do termo.
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-xs text-emerald-400 mb-2">
+                  Empresa criada ✓ — pronta para campanhas.
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link to="/campaigns/new">
+                    <Btn variant="ghost">Criar campanha</Btn>
+                  </Link>
+                  <Btn onClick={onSendReport} disabled={clientPending}>
+                    {clientPending
+                      ? 'Enviando…'
+                      : lead.reportSentAt
+                        ? 'Reenviar relatório'
+                        : 'Enviar relatório ao cliente'}
+                  </Btn>
+                </div>
+                <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                  "Enviar relatório" gera o link do relatório da{' '}
+                  <strong>última campanha</strong> deste cliente e envia para{' '}
+                  <strong>{lead.email}</strong>.
+                  {lead.reportSentAt && (
+                    <span className="text-emerald-400">
+                      {' '}
+                      Enviado em {fmtDateTime(lead.reportSentAt)}.
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {clientError && (
+              <div className="text-xs text-red-400 mt-2">{clientError}</div>
+            )}
           </div>
 
           <div className="mt-4">

@@ -48,4 +48,20 @@ export class LeadsController {
   sendTerm(@Param('id') id: string) {
     return this.leads.sendTerm(id);
   }
+
+  // Cria a Empresa (tenant) a partir do lead — habilita rodar campanhas.
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/create-company')
+  @HttpCode(200)
+  createCompany(@Param('id') id: string) {
+    return this.leads.createCompany(id);
+  }
+
+  // Envia o relatório da última campanha do cliente por e-mail.
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/send-report')
+  @HttpCode(200)
+  sendReport(@Param('id') id: string) {
+    return this.leads.sendReport(id);
+  }
 }
