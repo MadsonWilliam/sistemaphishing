@@ -100,8 +100,32 @@ export class LeadsService {
           dto.proposalConditions === undefined
             ? undefined
             : dto.proposalConditions.trim() || null,
+        meetingAt:
+          dto.meetingAt === undefined
+            ? undefined
+            : dto.meetingAt
+              ? new Date(dto.meetingAt)
+              : null,
       },
     });
+  }
+
+  // Arquiva / desarquiva o lead (arquivados ficam ocultos por padrão no Kanban).
+  async setArchived(id: string, archived: boolean): Promise<Lead> {
+    const exists = await this.prisma.lead.findUnique({ where: { id } });
+    if (!exists) throw new NotFoundException('Lead não encontrado.');
+    return this.prisma.lead.update({
+      where: { id },
+      data: { archivedAt: archived ? new Date() : null },
+    });
+  }
+
+  // Exclui o lead permanentemente.
+  async remove(id: string): Promise<{ deleted: true }> {
+    const exists = await this.prisma.lead.findUnique({ where: { id } });
+    if (!exists) throw new NotFoundException('Lead não encontrado.');
+    await this.prisma.lead.delete({ where: { id } });
+    return { deleted: true };
   }
 
   // Envia o TERMO DE AUTORIZAÇÃO ao cliente (aceite por resposta ao e-mail).

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -87,5 +88,25 @@ export class LeadsController {
   @HttpCode(200)
   sendProposal(@Param('id') id: string) {
     return this.leads.sendProposal(id);
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/archive')
+  @HttpCode(200)
+  archive(@Param('id') id: string) {
+    return this.leads.setArchived(id, true);
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Post(':id/unarchive')
+  @HttpCode(200)
+  unarchive(@Param('id') id: string) {
+    return this.leads.setArchived(id, false);
+  }
+
+  @Roles(Role.SUPER_ADMIN)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.leads.remove(id);
   }
 }

@@ -83,4 +83,10 @@ export class UpdateLeadDto {
   @IsString()
   @MaxLength(2000)
   proposalConditions?: string;
+
+  // Reunião/call agendada: ISO string (ou string vazia para limpar).
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  meetingAt?: string;
 }

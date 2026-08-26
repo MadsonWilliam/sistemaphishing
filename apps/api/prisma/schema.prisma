@@ -418,6 +418,10 @@ model Lead {
   proposalValue      String? // valor (texto livre, ex.: "R$ 1.200/mês")
   proposalConditions String?
   proposalSentAt     DateTime?
+  // Reunião/call agendada com o cliente (opcional).
+  meetingAt   DateTime?
+  // Arquivamento (leads arquivados só aparecem ao ativar "mostrar arquivados").
+  archivedAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

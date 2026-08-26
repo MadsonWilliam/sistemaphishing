@@ -34,8 +34,19 @@ interface Lead {
   proposalValue?: string | null;
   proposalConditions?: string | null;
   proposalSentAt?: string | null;
+  meetingAt?: string | null;
+  archivedAt?: string | null;
   createdAt: string;
 }
+
+// Máscara de moeda BRL: "800000" -> "R$ 8.000,00".
+const maskBRL = (raw: string): string => {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  const cents = (parseInt(digits, 10) / 100).toFixed(2);
+  const [int, dec] = cents.split('.');
+  return `R$ ${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}`;
+};
 
 const STAGES: { key: Stage; label: string; tone: string }[] = [
   { key: 'NOVO', label: 'Novo', tone: 'blue' },
@@ -117,6 +128,7 @@ export function Leads() {
   const [filter, setFilter] = useState<Stage | 'ALL'>('ALL');
   const [detail, setDetail] = useState<Lead | null>(null);
   const [dragOver, setDragOver] = useState<Stage | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const leads = useQuery({
     queryKey: ['leads'],
@@ -131,6 +143,7 @@ export function Leads() {
       proposalPlan?: string;
       proposalValue?: string;
       proposalConditions?: string;
+      meetingAt?: string;
     }) => {
       // O id vai só na URL — enviar no corpo quebra o ValidationPipe
       // (forbidNonWhitelisted) e retorna 400.
@@ -161,7 +174,9 @@ export function Leads() {
         | 'send-report'
         | 'request-contacts'
         | 'demo-campaign'
-        | 'send-proposal';
+        | 'send-proposal'
+        | 'archive'
+        | 'unarchive';
     }) => (await api.post<Lead>(`/leads/${v.id}/${v.kind}`)).data,
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['leads'] });
@@ -172,7 +187,27 @@ export function Leads() {
     clientAction.error as { response?: { data?: { message?: string } } }
   )?.response?.data?.message;
 
-  const all = leads.data ?? [];
+  const del = useMutation({
+    mutationFn: async (id: string) => (await api.delete(`/leads/${id}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      setDetail(null);
+    },
+  });
+
+  // "Enviar proposta" é absoluto: salva os campos e depois envia.
+  async function saveAndSendProposal(
+    id: string,
+    v: { proposalPlan?: string; proposalValue?: string; proposalConditions?: string },
+  ) {
+    await patch.mutateAsync({ id, ...v });
+    await clientAction.mutateAsync({ id, kind: 'send-proposal' });
+  }
+
+  const raw = leads.data ?? [];
+  const archivedCount = raw.filter((l) => l.archivedAt).length;
+  // Arquivados só entram quando "mostrar arquivados" está ativo.
+  const all = showArchived ? raw : raw.filter((l) => !l.archivedAt);
   const counts = STAGES.reduce<Record<string, number>>((acc, s) => {
     acc[s.key] = all.filter((l) => l.stage === s.key).length;
     return acc;
@@ -189,20 +224,34 @@ export function Leads() {
         title="Leads"
         subtitle="Solicitações de demonstração da landing. Arraste os cards para avançar o estágio."
         action={
-          <div className="flex rounded-lg border border-slate-700 overflow-hidden text-sm">
-            {(['kanban', 'lista'] as const).map((v) => (
+          <div className="flex items-center gap-2">
+            {archivedCount > 0 && (
               <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 capitalize transition ${
-                  view === v
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-400 hover:bg-slate-800/60'
+                onClick={() => setShowArchived((v) => !v)}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition ${
+                  showArchived
+                    ? 'bg-slate-800 text-white border-slate-700'
+                    : 'text-slate-400 hover:text-white border-slate-700'
                 }`}
               >
-                {v}
+                {showArchived ? 'Ocultar' : 'Mostrar'} arquivados ({archivedCount})
               </button>
-            ))}
+            )}
+            <div className="flex rounded-lg border border-slate-700 overflow-hidden text-sm">
+              {(['kanban', 'lista'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-3 py-1.5 capitalize transition ${
+                    view === v
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:bg-slate-800/60'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
         }
       />
@@ -379,10 +428,17 @@ export function Leads() {
           onDemoCampaign={() =>
             clientAction.mutate({ id: detail.id, kind: 'demo-campaign' })
           }
-          onSendProposal={() =>
-            clientAction.mutate({ id: detail.id, kind: 'send-proposal' })
-          }
+          onSendProposal={(v) => saveAndSendProposal(detail.id, v)}
           onSaveProposal={(v) => patch.mutate({ id: detail.id, ...v })}
+          onSaveMeeting={(iso) => patch.mutate({ id: detail.id, meetingAt: iso })}
+          onArchive={() =>
+            clientAction.mutate({
+              id: detail.id,
+              kind: detail.archivedAt ? 'unarchive' : 'archive',
+            })
+          }
+          onDelete={() => del.mutate(detail.id)}
+          deleting={del.isPending}
           clientPending={clientAction.isPending}
           clientError={clientAction.isError ? clientActionError ?? 'Falha.' : null}
         />
@@ -406,6 +462,10 @@ function LeadDetail({
   onDemoCampaign,
   onSendProposal,
   onSaveProposal,
+  onSaveMeeting,
+  onArchive,
+  onDelete,
+  deleting,
   clientPending,
   clientError,
 }: {
@@ -421,19 +481,34 @@ function LeadDetail({
   onSendReport: () => void;
   onRequestContacts: () => void;
   onDemoCampaign: () => void;
-  onSendProposal: () => void;
+  onSendProposal: (v: {
+    proposalPlan?: string;
+    proposalValue?: string;
+    proposalConditions?: string;
+  }) => void;
   onSaveProposal: (v: {
     proposalPlan?: string;
     proposalValue?: string;
     proposalConditions?: string;
   }) => void;
+  onSaveMeeting: (iso: string) => void;
+  onArchive: () => void;
+  onDelete: () => void;
+  deleting: boolean;
   clientPending: boolean;
   clientError: string | null;
 }) {
+  const toLocalInput = (iso?: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
   const [notes, setNotes] = useState(lead.notes ?? '');
   const [plan, setPlan] = useState(lead.proposalPlan ?? '');
   const [value, setValue] = useState(lead.proposalValue ?? '');
   const [conditions, setConditions] = useState(lead.proposalConditions ?? '');
+  const [meeting, setMeeting] = useState(toLocalInput(lead.meetingAt));
   const fmtDateTime = (iso: string) =>
     new Date(iso).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -526,6 +601,47 @@ function LeadDetail({
                 Avançar → {labelOf(nextStageOf(lead.stage) as Stage)}
               </Btn>
             )}
+          </div>
+
+          {/* Reunião / call agendada (opcional) */}
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-3">
+            <div className="text-xs text-slate-300 font-medium mb-2">
+              📅 Reunião / call agendada
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="datetime-local"
+                value={meeting}
+                onChange={(e) => setMeeting(e.target.value)}
+                className="bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-1.5 focus:border-brand-500 outline-none [color-scheme:dark]"
+              />
+              <Btn
+                variant="ghost"
+                onClick={() => onSaveMeeting(meeting)}
+                disabled={saving}
+              >
+                Salvar
+              </Btn>
+              {lead.meetingAt && (
+                <>
+                  <span className="text-[11px] text-emerald-400">
+                    Agendada: {fmtDateTime(lead.meetingAt)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setMeeting('');
+                      onSaveMeeting('');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-red-400"
+                  >
+                    limpar
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-600 mt-1">
+              Opcional — registre a data/hora da call ou reunião com o cliente.
+            </div>
           </div>
 
           {/* Termo de autorização — aceite por resposta ao e-mail */}
@@ -704,8 +820,9 @@ function LeadDetail({
                   </span>
                   <input
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    placeholder="R$ 1.200/mês"
+                    onChange={(e) => setValue(maskBRL(e.target.value))}
+                    inputMode="numeric"
+                    placeholder="R$ 8.000,00"
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
                   />
                 </label>
@@ -737,8 +854,14 @@ function LeadDetail({
                   {saving ? 'Salvando…' : 'Salvar'}
                 </Btn>
                 <Btn
-                  onClick={onSendProposal}
-                  disabled={clientPending || !plan || !value}
+                  onClick={() =>
+                    onSendProposal({
+                      proposalPlan: plan,
+                      proposalValue: value,
+                      proposalConditions: conditions,
+                    })
+                  }
+                  disabled={clientPending || saving || !plan || !value}
                 >
                   {clientPending
                     ? 'Enviando…'
@@ -753,7 +876,7 @@ function LeadDetail({
                 )}
               </div>
               <div className="text-[11px] text-slate-600 mt-1">
-                Salve antes de enviar. O e-mail comercial vai para{' '}
+                "Enviar" já salva e dispara o e-mail comercial para{' '}
                 <strong>{lead.email}</strong>.
               </div>
             </div>
@@ -794,6 +917,30 @@ function LeadDetail({
                 Responder por e-mail
               </a>
             </div>
+          </div>
+
+          {/* Rodapé — arquivar / excluir */}
+          <div className="mt-5 pt-3 border-t border-slate-800 flex items-center gap-3">
+            <Btn variant="ghost" onClick={onArchive} disabled={clientPending}>
+              {lead.archivedAt ? 'Desarquivar' : 'Arquivar'}
+            </Btn>
+            <Btn
+              variant="danger"
+              onClick={() => {
+                if (
+                  confirm('Excluir este lead permanentemente? Não dá para desfazer.')
+                )
+                  onDelete();
+              }}
+              disabled={deleting}
+            >
+              {deleting ? 'Excluindo…' : 'Excluir lead'}
+            </Btn>
+            {lead.archivedAt && (
+              <span className="text-[11px] text-slate-500">
+                Arquivado em {fmtDateTime(lead.archivedAt)}
+              </span>
+            )}
           </div>
         </div>
       </div>
