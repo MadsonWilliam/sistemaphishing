@@ -8,6 +8,7 @@ interface Company {
   name: string;
   status: string;
   cnpj?: string;
+  allowRecurrence?: boolean;
   _count?: { users: number };
 }
 
@@ -25,6 +26,7 @@ export function Companies() {
     adminName: '',
     adminEmail: '',
     adminPassword: '',
+    allowRecurrence: false,
   });
   const [error, setError] = useState('');
 
@@ -39,12 +41,25 @@ export function Companies() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
   });
 
+  const recurrence = useMutation({
+    mutationFn: async (v: { id: string; allow: boolean }) =>
+      (await api.patch(`/companies/${v.id}/recurrence`, { allowRecurrence: v.allow }))
+        .data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+
   const create = useMutation({
     mutationFn: async () => (await api.post('/companies', form)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['companies'] });
       setOpen(false);
-      setForm({ name: '', adminName: '', adminEmail: '', adminPassword: '' });
+      setForm({
+        name: '',
+        adminName: '',
+        adminEmail: '',
+        adminPassword: '',
+        allowRecurrence: false,
+      });
       setError('');
     },
     onError: (e: unknown) => {
@@ -97,6 +112,16 @@ export function Companies() {
               }
               required
             />
+            <label className="md:col-span-2 flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={form.allowRecurrence}
+                onChange={(e) =>
+                  setForm({ ...form, allowRecurrence: e.target.checked })
+                }
+              />
+              Liberar <strong>recorrência</strong> de campanha para este cliente
+            </label>
             <div className="md:col-span-2 flex items-center gap-3">
               <Btn type="submit" disabled={create.isPending}>
                 {create.isPending ? 'Criando…' : 'Criar empresa'}
@@ -114,6 +139,7 @@ export function Companies() {
               <th className="text-left font-medium px-4 py-3">Empresa</th>
               <th className="text-left font-medium px-4 py-3">Status</th>
               <th className="text-left font-medium px-4 py-3">Usuários</th>
+              <th className="text-left font-medium px-4 py-3">Recorrência</th>
               <th className="text-right font-medium px-4 py-3">Ações</th>
             </tr>
           </thead>
@@ -126,6 +152,21 @@ export function Companies() {
                 </td>
                 <td className="px-4 py-3 text-slate-400">
                   {c._count?.users ?? '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() =>
+                      recurrence.mutate({ id: c.id, allow: !c.allowRecurrence })
+                    }
+                    disabled={recurrence.isPending}
+                    className={`px-2.5 py-1 rounded-full text-xs transition ${
+                      c.allowRecurrence
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-slate-700/40 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {c.allowRecurrence ? 'Liberada ✓' : 'Bloqueada'}
+                  </button>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Btn
@@ -143,7 +184,7 @@ export function Companies() {
             ))}
             {companies.data?.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                   Nenhuma empresa ainda.
                 </td>
               </tr>

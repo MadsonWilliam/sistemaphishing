@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
@@ -17,6 +18,11 @@ export class CreateCompanyDto {
   @IsOptional()
   @IsString()
   cnpj?: string;
+
+  // Libera recorrência de campanha para o admin do cliente.
+  @IsOptional()
+  @IsBoolean()
+  allowRecurrence?: boolean;
 
   // Admin inicial da empresa (recebe papel COMPANY_ADMIN).
   @IsEmail()

@@ -27,6 +27,7 @@ export class CompaniesService {
         name: dto.name,
         legalName: dto.legalName,
         cnpj: dto.cnpj,
+        allowRecurrence: dto.allowRecurrence ?? false,
         users: {
           create: {
             email,
@@ -54,9 +55,21 @@ export class CompaniesService {
         legalName: true,
         cnpj: true,
         status: true,
+        allowRecurrence: true,
         createdAt: true,
         _count: { select: { users: true } },
       },
+    });
+  }
+
+  // Liga/desliga a recorrência de campanha para o admin do cliente.
+  async setRecurrence(id: string, allow: boolean) {
+    const exists = await this.prisma.company.findUnique({ where: { id } });
+    if (!exists) throw new NotFoundException('Empresa não encontrada.');
+    return this.prisma.company.update({
+      where: { id },
+      data: { allowRecurrence: allow },
+      select: { id: true, name: true, allowRecurrence: true },
     });
   }
 
@@ -81,6 +94,7 @@ export class CompaniesService {
         legalName: true,
         cnpj: true,
         status: true,
+        allowRecurrence: true,
         createdAt: true,
         authorizations: {
           where: { revokedAt: null },

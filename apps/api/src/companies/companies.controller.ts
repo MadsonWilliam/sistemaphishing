@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -40,6 +41,16 @@ export class CompaniesController {
       throw new ForbiddenException('Acesso restrito à sua própria empresa.');
     }
     return this.companies.findOne(id);
+  }
+
+  // Liga/desliga recorrência de campanha para o admin do cliente.
+  @Roles(Role.SUPER_ADMIN)
+  @Patch(':id/recurrence')
+  setRecurrence(
+    @Param('id') id: string,
+    @Body() body: { allowRecurrence: boolean },
+  ) {
+    return this.companies.setRecurrence(id, !!body.allowRecurrence);
   }
 
   @Roles(Role.SUPER_ADMIN)

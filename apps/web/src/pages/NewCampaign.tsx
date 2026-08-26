@@ -65,7 +65,7 @@ export function NewCampaign() {
     name: '',
     postClickBehavior: 'EDUCATIONAL',
     showReportButton: true,
-    microTraining: true,
+    microTraining: false,
     dripWindowSeconds: 0,
     brandLogoUrl: '',
     brandColor: '',
@@ -144,6 +144,15 @@ export function NewCampaign() {
     queryFn: async () =>
       (await api.get<Domain[]>('/sending-domains/available')).data,
   });
+  // Admin do cliente: só libera recorrência se a empresa dele tiver a flag.
+  const myCompany = useQuery({
+    queryKey: ['my-company', user?.companyId],
+    queryFn: async () =>
+      (await api.get<{ allowRecurrence?: boolean }>(`/companies/${user!.companyId}`))
+        .data,
+    enabled: !isSuper && !!user?.companyId,
+  });
+  const recurrenceAllowed = isSuper || !!myCompany.data?.allowRecurrence;
 
   const identities = useMemo(
     () =>
@@ -366,30 +375,32 @@ export function NewCampaign() {
               onChange={(e) => setF({ ...f, postClickBehavior: e.target.value })}
               className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
             >
-              <option value="EDUCATIONAL">Página educativa</option>
-              <option value="BLANK">Tela em branco</option>
+              <option value="EDUCATIONAL">Página educativa (estática)</option>
+              <option value="MICROTRAINING">
+                Micro-treino interativo (cards de como identificar)
+              </option>
               <option value="FORM">Formulário falso (não salva senha)</option>
+              <option value="BLANK">Tela em branco</option>
             </select>
+            <span className="block text-xs text-slate-500 mt-1">
+              O micro-treino é interativo: cards passo a passo com exemplos de
+              como reconhecer o golpe.
+            </span>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={f.showReportButton} onChange={(e) => setF({ ...f, showReportButton: e.target.checked })} />
             Incluir botão "Reportar phishing"
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={f.microTraining} onChange={(e) => setF({ ...f, microTraining: e.target.checked })} />
-            Micro-treino após o clique
-          </label>
           <Field
-            label="Gota-a-gota: espalhar envios em (segundos)"
+            label="Gota-a-gota — tempo entre um envio e outro (segundos)"
             type="number"
             value={f.dripWindowSeconds}
             onChange={(e) => setF({ ...f, dripWindowSeconds: Number(e.target.value) })}
           />
           <p className="text-xs text-slate-500">
-            🔗 O domínio do link agora é o <strong>mesmo do remetente</strong>{' '}
-            escolhido (ex.: remetente <code>contabilmaisbrasil.com.br</code> →
-            link <code>contabilmaisbrasil.com.br/fatura/…</code>). Nada a
-            configurar aqui.
+            🔗 O domínio dos links é o <strong>mesmo do remetente</strong>{' '}
+            escolhido — ex.: remetente <code>contabilmaisbrasil.com.br</code> →
+            link <code>contabilmaisbrasil.com.br/fatura/…</code>.
           </p>
         </Card>
 
@@ -424,10 +435,12 @@ export function NewCampaign() {
         </Card>
 
         <Card className="p-4 space-y-4 lg:col-span-2">
-          <div className="text-sm font-medium">5 · Opcionais — marca do cliente</div>
+          <div className="text-sm font-medium">5 · Opcionais — marca</div>
           <p className="text-xs text-slate-500">
-            Use só se o cliente <strong>quiser</strong> a landing com a cara
-            dele. Sem nada aqui, a página falsa fica um portal neutro.
+            Personalize a página com a marca da empresa. Sem nada aqui, ela fica
+            um portal neutro. As cores e o logo aparecem <strong>apenas nas
+            páginas de formulário e no micro-treino</strong> (não no e-mail), para
+            não confundir a experiência.
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -471,8 +484,9 @@ export function NewCampaign() {
                 <span className="block text-xs text-amber-400 mt-1">{logoErr}</span>
               )}
               <span className="block text-[11px] text-slate-500 mt-1">
-                PNG/JPG/SVG até ~250KB. A imagem fica embutida — não precisa de
-                link público.
+                PNG/JPG/SVG até ~250KB, embutido (sem link público). O ideal é
+                um logo <strong>nem totalmente branco nem totalmente escuro</strong>,
+                para aparecer bem sobre a barra colorida.
               </span>
             </div>
 
@@ -482,9 +496,10 @@ export function NewCampaign() {
                 Recorrência automática
               </span>
               <select
-                value={f.recurrence}
+                value={recurrenceAllowed ? f.recurrence : 'NONE'}
+                disabled={!recurrenceAllowed}
                 onChange={(e) => setF({ ...f, recurrence: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm"
+                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm disabled:opacity-50"
               >
                 <option value="NONE">Não repetir (campanha única)</option>
                 <option value="WEEKLY">Repetir toda semana</option>
@@ -492,8 +507,17 @@ export function NewCampaign() {
                 <option value="QUARTERLY">Repetir a cada trimestre</option>
               </select>
               <span className="block text-[11px] text-slate-500 mt-1">
-                Re-dispara a <strong>mesma</strong> campanha (mesmos alvos e
-                configuração) no intervalo, medindo a evolução sozinha.
+                {recurrenceAllowed ? (
+                  <>
+                    Re-dispara a <strong>mesma</strong> campanha (mesmos alvos e
+                    configuração) no intervalo, medindo a evolução sozinha.
+                  </>
+                ) : (
+                  <>
+                    Recorrência não habilitada para esta conta. Fale com a Nexium
+                    para liberar.
+                  </>
+                )}
               </span>
             </div>
           </div>

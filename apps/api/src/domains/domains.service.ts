@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DomainStatus, SendingDomain } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { SmtpTransportService } from '../mail/smtp-transport.service';
@@ -24,6 +25,7 @@ export class DomainsService {
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
     private readonly smtp: SmtpTransportService,
+    private readonly config: ConfigService,
   ) {}
 
   // Monta a config SMTP (com senha decifrada) — uso interno apenas.
@@ -70,10 +72,17 @@ export class DomainsService {
   // NÃO expõe config SMTP (host/usuário/senha) — só o que dá para escolher.
   // Escopo: domínios compartilhados (companyId null) + os da própria empresa.
   async listAvailable(scopeCompanyId?: string) {
+    // Admin do cliente (scope) NÃO vê o domínio institucional (rsweb) — esse é
+    // só teste interno; ele escolhe entre os domínios-isca (jurídico/contábil).
+    const internal =
+      this.config.get<string>('INTERNAL_SENDING_DOMAIN') ?? 'rsweb.net.br';
     const where =
       scopeCompanyId === undefined
         ? {}
-        : { OR: [{ companyId: null }, { companyId: scopeCompanyId }] };
+        : {
+            OR: [{ companyId: null }, { companyId: scopeCompanyId }],
+            NOT: { domain: internal },
+          };
     const domains = await this.prisma.sendingDomain.findMany({
       where,
       orderBy: { createdAt: 'desc' },

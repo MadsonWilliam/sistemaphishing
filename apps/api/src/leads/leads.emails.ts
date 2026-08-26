@@ -60,6 +60,7 @@ export function proposalHtml(lead: Lead): string {
     <ul style="font-size:14px;color:#334155;line-height:1.7">
       <li><strong>Essencial</strong> — até 2 testes por mês, relatório e treino incluídos.</li>
       <li><strong>Ilimitado</strong> — testes ilimitados, incluindo outros domínios da sua operação.</li>
+      <li><strong>Antivírus corporativo Bitdefender</strong> — proteção de endpoints para complementar a conscientização.</li>
     </ul>
 
     <p style="margin-top:18px">Para seguir, é só <strong>responder este e-mail</strong> confirmando o plano —

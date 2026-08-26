@@ -10,6 +10,7 @@ import {
   blankPage,
   educationalPage,
   fakeFormPage,
+  microTrainingPage,
   reportedPage,
 } from './landing.templates';
 import { classifyAccess, isSecurityScanner } from './bot-detection';
@@ -228,6 +229,9 @@ export class TrackingService {
         break;
       case PostClickBehavior.FORM:
         page = fakeFormPage({ token, brand });
+        break;
+      case PostClickBehavior.MICROTRAINING:
+        page = microTrainingPage({ brand });
         break;
       case PostClickBehavior.EDUCATIONAL:
       default:

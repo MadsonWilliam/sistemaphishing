@@ -812,6 +812,9 @@ function LeadDetail({
                     <option value="Ilimitado — testes ilimitados + outros domínios">
                       Ilimitado — ilimitado + outros domínios
                     </option>
+                    <option value="Antivírus corporativo Bitdefender">
+                      Antivírus corporativo Bitdefender
+                    </option>
                   </select>
                 </label>
                 <label className="block">

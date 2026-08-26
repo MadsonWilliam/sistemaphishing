@@ -175,6 +175,112 @@ export function fakeFormPage(opts: { token: string; brand?: Brand }): string {
 </body></html>`;
 }
 
+// Micro-treino INTERATIVO: cards navegáveis com exemplos de como identificar
+// phishing. Marca opt-in (logo + cor de destaque). Self-contained (HTML/CSS/JS).
+export function microTrainingPage(opts: { brand?: Brand }): string {
+  const color = safeColor(opts.brand?.color);
+  const logoUrl = safeUrl(opts.brand?.logoUrl);
+  const logo = logoUrl
+    ? `<img src="${logoUrl}" alt="" style="max-height:34px;max-width:150px">`
+    : `<div class="mk">🛡️</div>`;
+
+  // Cada card: título, texto e um "mock" ilustrativo com o sinal de alerta.
+  const cards = [
+    {
+      t: '⚠️ Isto foi um teste de segurança',
+      d: 'Você clicou em um phishing <strong>simulado</strong> — nenhum dano e nenhum dado coletado. Em 1 minuto, aprenda a identificar o próximo. Toque em <strong>Próximo</strong>.',
+      m: '',
+    },
+    {
+      t: '1. Confira o remetente',
+      d: 'Golpistas imitam domínios reais com pequenas trocas. Olhe com atenção o endereço, não só o nome.',
+      m: `<div class="mock"><span class="lbl">De:</span> Financeiro &lt;cobranca@<span class="bad">contabiil-maisbrasil.com</span>&gt;<div class="tip">Domínio parecido, mas com letra a mais.</div></div>`,
+    },
+    {
+      t: '2. Passe o mouse no link',
+      d: 'Antes de clicar, veja para onde o link realmente aponta. Se o domínio não for o oficial, desconfie.',
+      m: `<div class="mock"><a class="fakebtn" style="background:${color}">Emitir 2ª via</a><div class="url">🔗 <span class="bad">2via-boleto-online.com</span>/fatura/…</div><div class="tip">O texto diz uma coisa; o link leva para outra.</div></div>`,
+    },
+    {
+      t: '3. Urgência e ameaça',
+      d: 'Pressão para agir "agora" é a tática mais comum. Pare e pense antes de reagir.',
+      m: `<div class="mock"><span class="bad">⏰ Sua conta será bloqueada HOJE!</span> Regularize em 2 horas para evitar juros.<div class="tip">Urgência artificial para você não pensar.</div></div>`,
+    },
+    {
+      t: '4. Pediu senha ou dados?',
+      d: 'Nenhuma empresa séria pede senha por link de e-mail. Nunca informe credenciais a partir de um e-mail.',
+      m: `<div class="mock"><span class="lbl">Nova senha</span> <span class="field">••••••••</span><div class="tip">Formulário pedindo senha = sinal de alerta.</div></div>`,
+    },
+    {
+      t: '5. Na dúvida, reporte',
+      d: 'Não clique, não responda. Encaminhe ao seu TI/segurança. Reportar protege toda a empresa.',
+      m: `<div class="mock ok">✅ Reportar ao TI é sempre a atitude certa.</div>`,
+    },
+    {
+      t: '🎉 Treino concluído!',
+      d: 'Você está mais preparado. Lembre das 3 perguntas antes de clicar: <em>Eu esperava isso? O remetente confere? O link leva para onde diz?</em> Se algo não bater, pare.',
+      m: '',
+    },
+  ];
+
+  const slides = cards
+    .map(
+      (c, i) => `<section class="slide${i === 0 ? ' on' : ''}" data-i="${i}">
+        <h2>${c.t}</h2><p>${c.d}</p>${c.m}</section>`,
+    )
+    .join('');
+  const dots = cards
+    .map((_, i) => `<span class="dot${i === 0 ? ' on' : ''}"></span>`)
+    .join('');
+
+  return `<!doctype html><html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Micro-treino de segurança</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:#eef1f6;color:#1f2937;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;width:100%;max-width:440px;border-radius:16px;box-shadow:0 12px 40px rgba(17,24,39,.12);overflow:hidden}
+  .top{background:${color};color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
+  .mk{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center}
+  .top b{font-size:14px;font-weight:600}
+  .body{padding:22px;min-height:230px}
+  h2{font-size:18px;margin:0 0 10px} p{color:#475569;line-height:1.6;margin:0 0 14px;font-size:15px}
+  .slide{display:none} .slide.on{display:block;animation:f .25s ease}
+  @keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .mock{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;font-size:14px;color:#334155}
+  .mock.ok{border-color:#a7f3d0;background:#ecfdf5;color:#065f46;font-weight:600}
+  .lbl{color:#94a3b8} .bad{color:#b91c1c;font-weight:700;background:#fef2f2;padding:0 3px;border-radius:3px}
+  .tip{margin-top:8px;font-size:12px;color:#64748b} .field{letter-spacing:2px}
+  .fakebtn{display:inline-block;color:#fff;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px}
+  .url{margin-top:8px;font-size:13px;color:#334155}
+  .foot{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid #eef2f7}
+  .dots{display:flex;gap:6px} .dot{width:7px;height:7px;border-radius:50%;background:#cbd5e1} .dot.on{background:${color}}
+  button{border:0;border-radius:9px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  #next{background:${color};color:#fff} #prev{background:#eef2f7;color:#475569}
+  #prev[disabled]{opacity:.4;cursor:default}
+</style></head><body>
+  <div class="card">
+    <div class="top">${logo}<b>Micro-treino de segurança</b></div>
+    <div class="body">${slides}</div>
+    <div class="foot">
+      <button id="prev" disabled>Anterior</button>
+      <div class="dots">${dots}</div>
+      <button id="next">Próximo</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var i=0, s=document.querySelectorAll('.slide'), d=document.querySelectorAll('.dot');
+      var prev=document.getElementById('prev'), next=document.getElementById('next');
+      function show(){ s.forEach(function(x,n){x.classList.toggle('on',n===i)});
+        d.forEach(function(x,n){x.classList.toggle('on',n===i)});
+        prev.disabled=i===0; next.textContent=i===s.length-1?'Concluir':'Próximo'; }
+      next.onclick=function(){ if(i<s.length-1){i++;show();} else {next.disabled=true;next.textContent='✔ Concluído';} };
+      prev.onclick=function(){ if(i>0){i--;show();} };
+    })();
+  </script>
+</body></html>`;
+}
+
 export function reportedPage(opts?: { brand?: Brand }): string {
   return shell(
     'Obrigado por reportar',
