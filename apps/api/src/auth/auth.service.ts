@@ -6,8 +6,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, randomInt } from 'crypto';
+import { DomainStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { DomainsService } from '../domains/domains.service';
+import { SmtpTransportService } from '../mail/smtp-transport.service';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 export interface TokenPair {
@@ -22,6 +25,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly domains: DomainsService,
+    private readonly smtp: SmtpTransportService,
   ) {}
 
   private hashToken(token: string): string {
@@ -158,5 +163,99 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+  }
+
+  // "Esqueci a senha": gera um código de 6 dígitos, guarda HASHEADO (15 min) e
+  // envia por e-mail. Resposta sempre { ok } — não revela se o e-mail existe.
+  async forgotPassword(email: string): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (user && user.isActive) {
+      const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetCodeHash: this.hashToken(code),
+          resetCodeExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+      await this.sendResetEmail(user.email, user.name, code).catch(() => undefined);
+    }
+    return { ok: true };
+  }
+
+  // Valida o código e define a nova senha (e invalida sessões ativas).
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (
+      !user ||
+      !user.resetCodeHash ||
+      !user.resetCodeExpiresAt ||
+      user.resetCodeExpiresAt < new Date() ||
+      this.hashToken(code.trim()) !== user.resetCodeHash
+    ) {
+      throw new BadRequestException('Código inválido ou expirado.');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, resetCodeHash: null, resetCodeExpiresAt: null },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
+  private async sendResetEmail(
+    email: string,
+    name: string,
+    code: string,
+  ): Promise<void> {
+    const internal =
+      this.config.get<string>('INTERNAL_SENDING_DOMAIN') ?? 'rsweb.net.br';
+    const domain =
+      (await this.prisma.sendingDomain.findFirst({
+        where: { domain: internal, status: DomainStatus.VERIFIED },
+      })) ??
+      (await this.prisma.sendingDomain.findFirst({
+        where: { status: DomainStatus.VERIFIED },
+      }));
+    if (!domain) return;
+    const cfg = this.domains.smtpConfigOf(domain);
+    const identity = await this.prisma.senderIdentity.findFirst({
+      where: { domainId: domain.id },
+      orderBy: { localPart: 'asc' },
+    });
+    const fromEmail = identity
+      ? `${identity.localPart}@${domain.domain}`
+      : `no-reply@${domain.domain}`;
+    await this.smtp.send(cfg, {
+      fromEmail,
+      fromName: 'NexGuard',
+      toEmail: email,
+      toName: name,
+      subject: 'Código para redefinir sua senha — NexGuard',
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#0f172a">
+        <p>Olá ${name},</p>
+        <p>Recebemos um pedido para redefinir a senha da sua conta NexGuard. Use o código abaixo:</p>
+        <div style="text-align:center;margin:22px 0">
+          <div style="display:inline-block;background:#0f172a;color:#fff;font-size:30px;letter-spacing:8px;font-weight:700;padding:14px 26px;border-radius:12px">${code}</div>
+        </div>
+        <p style="color:#475569">O código expira em <strong>15 minutos</strong>. Ao inseri-lo, você define uma nova senha.</p>
+        <p style="color:#94a3b8;font-size:13px">Se você não pediu isso, ignore este e-mail — sua senha continua a mesma.</p>
+      </div>`,
+      text: `Seu codigo para redefinir a senha NexGuard: ${code} (valido por 15 minutos).`,
+    });
   }
 }

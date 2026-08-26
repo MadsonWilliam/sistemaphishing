@@ -66,6 +66,10 @@ model User {
   refreshTokens RefreshToken[]
   lastLoginAt   DateTime?
 
+  // Recuperação de senha por código (hash + validade).
+  resetCodeHash      String?
+  resetCodeExpiresAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

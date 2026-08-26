@@ -24,3 +24,21 @@ export class ChangePasswordDto {
   @MinLength(8, { message: 'A nova senha deve ter ao menos 8 caracteres.' })
   newPassword!: string;
 }
+
+export class ForgotPasswordDto {
+  @IsEmail({}, { message: 'E-mail inválido.' })
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail({}, { message: 'E-mail inválido.' })
+  email!: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o código recebido.' })
+  code!: string;
+
+  @IsString()
+  @MinLength(8, { message: 'A nova senha deve ter ao menos 8 caracteres.' })
+  newPassword!: string;
+}

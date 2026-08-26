@@ -11,7 +11,12 @@ import {
 import { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, ChangePasswordDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import {
   CurrentUser,
@@ -71,6 +76,24 @@ export class AuthController {
       await this.auth.logout(token);
     }
     clearAuthCookies(res);
+  }
+
+  // Esqueci a senha: envia um código por e-mail. Resposta sempre 200.
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('forgot-password')
+  @HttpCode(200)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto.email);
+  }
+
+  // Redefine a senha com o código recebido.
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('reset-password')
+  @HttpCode(200)
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.email, dto.code, dto.newPassword);
   }
 
   @Get('me')
