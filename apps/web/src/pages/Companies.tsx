@@ -18,9 +18,19 @@ const statusTone: Record<string, string> = {
   SUSPENDED: 'red',
 };
 
+interface CompanyUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  lastLoginAt?: string | null;
+}
+
 export function Companies() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [manageCo, setManageCo] = useState<Company | null>(null);
   const [form, setForm] = useState({
     name: '',
     adminName: '',
@@ -168,7 +178,10 @@ export function Companies() {
                     {c.allowRecurrence ? 'Liberada ✓' : 'Bloqueada'}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <Btn variant="ghost" onClick={() => setManageCo(c)}>
+                    Usuários
+                  </Btn>{' '}
                   <Btn
                     variant="danger"
                     onClick={() =>
@@ -192,6 +205,151 @@ export function Companies() {
           </tbody>
         </table>
       </Card>
+
+      {manageCo && (
+        <CompanyUsers company={manageCo} onClose={() => setManageCo(null)} />
+      )}
+    </div>
+  );
+}
+
+function CompanyUsers({
+  company,
+  onClose,
+}: {
+  company: Company;
+  onClose: () => void;
+}) {
+  const users = useQuery({
+    queryKey: ['company-users', company.id],
+    queryFn: async () =>
+      (await api.get<CompanyUser[]>(`/companies/${company.id}/users`)).data,
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg p-6 relative rounded-xl border border-slate-800 bg-slate-900 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 grid place-items-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+        >
+          ✕
+        </button>
+        <div className="text-lg font-semibold pr-8">Usuários · {company.name}</div>
+        <div className="text-xs text-slate-500 mt-1">
+          Edite o nome e/ou defina uma nova senha para o cliente. Trocar a senha
+          encerra as sessões ativas dele.
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {users.isLoading && (
+            <div className="text-sm text-slate-500">Carregando…</div>
+          )}
+          {users.data?.map((u) => (
+            <UserEditor key={u.id} companyId={company.id} user={u} />
+          ))}
+          {users.data?.length === 0 && (
+            <div className="text-sm text-slate-500">
+              Esta empresa ainda não tem usuários (crie a empresa pelo lead ou
+              pelo formulário "+ Nova empresa" para gerar o admin).
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UserEditor({
+  companyId,
+  user,
+}: {
+  companyId: string;
+  user: CompanyUser;
+}) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(user.name);
+  const [password, setPassword] = useState('');
+  const [ok, setOk] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const body: { name?: string; password?: string } = {};
+      if (name.trim() && name.trim() !== user.name) body.name = name.trim();
+      if (password) body.password = password;
+      return (
+        await api.patch(`/companies/${companyId}/users/${user.id}`, body)
+      ).data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['company-users', companyId] });
+      setPassword('');
+      setOk(true);
+      setError('');
+      setTimeout(() => setOk(false), 2500);
+    },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { message?: string | string[] } } };
+      const m = err.response?.data?.message;
+      setError((Array.isArray(m) ? m[0] : m) || 'Erro ao salvar.');
+    },
+  });
+
+  const dirty = (name.trim() && name.trim() !== user.name) || !!password;
+  const pwTooShort = !!password && password.length < 8;
+
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm text-slate-200">{user.email}</div>
+        <Badge tone={user.role === 'COMPANY_ADMIN' ? 'blue' : 'slate'}>
+          {user.role === 'COMPANY_ADMIN' ? 'Admin' : user.role}
+        </Badge>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2 mt-2">
+        <label className="block">
+          <span className="block text-[11px] text-slate-400 mb-1">Nome</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-[11px] text-slate-400 mb-1">
+            Nova senha
+          </span>
+          <input
+            type="text"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="deixe em branco p/ manter"
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+          />
+        </label>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
+        <Btn
+          onClick={() => save.mutate()}
+          disabled={save.isPending || !dirty || pwTooShort}
+        >
+          {save.isPending ? 'Salvando…' : 'Salvar'}
+        </Btn>
+        {pwTooShort && (
+          <span className="text-[11px] text-amber-400">
+            Senha: mínimo 8 caracteres.
+          </span>
+        )}
+        {ok && <span className="text-[11px] text-emerald-400">Salvo ✓</span>}
+        {error && <span className="text-[11px] text-red-400">{error}</span>}
+      </div>
     </div>
   );
 }

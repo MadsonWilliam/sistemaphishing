@@ -6,7 +6,7 @@ import {
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCompanyDto } from './dto/company.dto';
+import { CreateCompanyDto, UpdateCompanyUserDto } from './dto/company.dto';
 
 @Injectable()
 export class CompaniesService {
@@ -71,6 +71,65 @@ export class CompaniesService {
       data: { allowRecurrence: allow },
       select: { id: true, name: true, allowRecurrence: true },
     });
+  }
+
+  // Lista os usuários (clientes) da empresa — para o admin editar.
+  async listUsers(companyId: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { id: true },
+    });
+    if (!company) throw new NotFoundException('Empresa não encontrada.');
+    return this.prisma.user.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        lastLoginAt: true,
+      },
+    });
+  }
+
+  // Edita um usuário da empresa: troca o nome e/ou define uma nova senha.
+  // Trocar a senha invalida as sessões ativas do usuário.
+  async updateUser(companyId: string, userId: string, dto: UpdateCompanyUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.companyId !== companyId) {
+      throw new NotFoundException('Usuário não encontrado nesta empresa.');
+    }
+    const data: { name?: string; passwordHash?: string } = {};
+    if (dto.name !== undefined && dto.name.trim()) data.name = dto.name.trim();
+    if (dto.password) data.passwordHash = await bcrypt.hash(dto.password, 12);
+
+    if (!data.name && !data.passwordHash) {
+      return this.prisma.user.update({
+        where: { id: userId },
+        data: {},
+        select: { id: true, name: true, email: true, role: true, isActive: true },
+      });
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data,
+        select: { id: true, name: true, email: true, role: true, isActive: true },
+      }),
+      // Se a senha mudou, derruba as sessões ativas do usuário.
+      ...(data.passwordHash
+        ? [
+            this.prisma.refreshToken.updateMany({
+              where: { userId, revokedAt: null },
+              data: { revokedAt: new Date() },
+            }),
+          ]
+        : []),
+    ]);
+    return updated;
   }
 
   // Remove a empresa e tudo dela (usuários, campanhas→alvos→eventos,

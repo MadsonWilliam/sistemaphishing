@@ -60,6 +60,23 @@ export class CreateLeadDto {
 // Atualização manual pelo operador (mini-CRM): avançar estágio, anotar e
 // preencher a proposta comercial.
 export class UpdateLeadDto {
+  // Correção de dados do card (o cliente às vezes errou o próprio nome,
+  // o da empresa ou o CNPJ). Raro, mas precisa ser editável.
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  company?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(25)
+  cnpj?: string;
+
   @IsOptional()
   @IsEnum(LeadStage, { message: 'Estágio inválido.' })
   stage?: LeadStage;

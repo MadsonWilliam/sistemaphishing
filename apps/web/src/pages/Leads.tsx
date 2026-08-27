@@ -140,6 +140,9 @@ export function Leads() {
       id: string;
       stage?: Stage;
       notes?: string;
+      name?: string;
+      company?: string;
+      cnpj?: string;
       proposalPlan?: string;
       proposalValue?: string;
       proposalConditions?: string;
@@ -407,6 +410,7 @@ export function Leads() {
           onClose={() => setDetail(null)}
           onStage={(stage) => move(detail.id, stage)}
           onSaveNotes={(notes) => patch.mutate({ id: detail.id, notes })}
+          onSaveInfo={(v) => patch.mutate({ id: detail.id, ...v })}
           saving={patch.isPending}
           onSendTerm={() => sendTerm.mutate(detail.id)}
           termSending={sendTerm.isPending}
@@ -452,6 +456,7 @@ function LeadDetail({
   onClose,
   onStage,
   onSaveNotes,
+  onSaveInfo,
   saving,
   onSendTerm,
   termSending,
@@ -473,6 +478,7 @@ function LeadDetail({
   onClose: () => void;
   onStage: (s: Stage) => void;
   onSaveNotes: (notes: string) => void;
+  onSaveInfo: (v: { name?: string; company?: string; cnpj?: string }) => void;
   saving: boolean;
   onSendTerm: () => void;
   termSending: boolean;
@@ -505,6 +511,10 @@ function LeadDetail({
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   };
   const [notes, setNotes] = useState(lead.notes ?? '');
+  const [editInfo, setEditInfo] = useState(false);
+  const [fName, setFName] = useState(lead.name);
+  const [fCompany, setFCompany] = useState(lead.company);
+  const [fCnpj, setFCnpj] = useState(lead.cnpj ?? '');
   const [plan, setPlan] = useState(lead.proposalPlan ?? '');
   const [value, setValue] = useState(lead.proposalValue ?? '');
   const [conditions, setConditions] = useState(lead.proposalConditions ?? '');
@@ -552,29 +562,100 @@ function LeadDetail({
 
           {/* Todos os dados do formulário */}
           <div className="mt-4">
-            <div className="text-xs text-slate-500 mb-1.5">
-              Dados do formulário
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-xs text-slate-500">Dados do formulário</div>
+              <button
+                onClick={() => {
+                  setFName(lead.name);
+                  setFCompany(lead.company);
+                  setFCnpj(lead.cnpj ?? '');
+                  setEditInfo((v) => !v);
+                }}
+                className="text-[11px] text-brand-400 hover:underline"
+              >
+                {editInfo ? 'Cancelar' : 'Editar dados'}
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-slate-800 bg-slate-950 p-3">
-              {(
-                [
-                  ['Empresa', lead.company],
-                  ['CNPJ', lead.cnpj],
-                  ['Responsável', lead.name],
-                  ['Telefone', lead.phone],
-                  ['E-mail', lead.email],
-                  ['Funcionários', lead.employees],
-                  ['Recebido', fmtDate(lead.createdAt)],
-                ] as [string, string | null | undefined][]
-              ).map(([k, v]) => (
-                <div key={k} className="min-w-0">
-                  <div className="text-[11px] text-slate-500">{k}</div>
-                  <div className="text-slate-200 truncate" title={v || undefined}>
-                    {v || '—'}
-                  </div>
+
+            {editInfo ? (
+              <div className="rounded-lg border border-brand-500/40 bg-brand-500/[0.06] p-3 space-y-2">
+                <label className="block">
+                  <span className="block text-[11px] text-slate-400 mb-1">
+                    Empresa
+                  </span>
+                  <input
+                    value={fCompany}
+                    onChange={(e) => setFCompany(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="block text-[11px] text-slate-400 mb-1">
+                      Responsável
+                    </span>
+                    <input
+                      value={fName}
+                      onChange={(e) => setFName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] text-slate-400 mb-1">
+                      CNPJ
+                    </span>
+                    <input
+                      value={fCnpj}
+                      onChange={(e) => setFCnpj(e.target.value)}
+                      placeholder="—"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+                    />
+                  </label>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Btn
+                    onClick={() => {
+                      onSaveInfo({
+                        name: fName,
+                        company: fCompany,
+                        cnpj: fCnpj,
+                      });
+                      setEditInfo(false);
+                    }}
+                    disabled={saving || !fName.trim() || !fCompany.trim()}
+                  >
+                    {saving ? 'Salvando…' : 'Salvar dados'}
+                  </Btn>
+                  <span className="text-[11px] text-slate-600">
+                    E-mail e telefone não mudam aqui.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm rounded-lg border border-slate-800 bg-slate-950 p-3">
+                {(
+                  [
+                    ['Empresa', lead.company],
+                    ['CNPJ', lead.cnpj],
+                    ['Responsável', lead.name],
+                    ['Telefone', lead.phone],
+                    ['E-mail', lead.email],
+                    ['Funcionários', lead.employees],
+                    ['Recebido', fmtDate(lead.createdAt)],
+                  ] as [string, string | null | undefined][]
+                ).map(([k, v]) => (
+                  <div key={k} className="min-w-0">
+                    <div className="text-[11px] text-slate-500">{k}</div>
+                    <div
+                      className="text-slate-200 truncate"
+                      title={v || undefined}
+                    >
+                      {v || '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Estágio + avançar */}

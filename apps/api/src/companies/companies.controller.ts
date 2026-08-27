@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { CompaniesService } from './companies.service';
-import { CreateCompanyDto } from './dto/company.dto';
+import { CreateCompanyDto, UpdateCompanyUserDto } from './dto/company.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
   CurrentUser,
@@ -41,6 +41,24 @@ export class CompaniesController {
       throw new ForbiddenException('Acesso restrito à sua própria empresa.');
     }
     return this.companies.findOne(id);
+  }
+
+  // Usuários (clientes) da empresa — para editar nome/senha.
+  @Roles(Role.SUPER_ADMIN)
+  @Get(':id/users')
+  listUsers(@Param('id') id: string) {
+    return this.companies.listUsers(id);
+  }
+
+  // Edita um usuário da empresa: nome e/ou nova senha.
+  @Roles(Role.SUPER_ADMIN)
+  @Patch(':id/users/:userId')
+  updateUser(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() dto: UpdateCompanyUserDto,
+  ) {
+    return this.companies.updateUser(id, userId, dto);
   }
 
   // Liga/desliga recorrência de campanha para o admin do cliente.

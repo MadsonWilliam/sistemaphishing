@@ -36,3 +36,17 @@ export class CreateCompanyDto {
   @MinLength(8)
   adminPassword!: string;
 }
+
+// Edição de um usuário (cliente) pelo admin: trocar nome e/ou definir uma
+// nova senha. Ambos opcionais — envia só o que quer alterar.
+export class UpdateCompanyUserDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8, { message: 'A nova senha deve ter ao menos 8 caracteres.' })
+  password?: string;
+}

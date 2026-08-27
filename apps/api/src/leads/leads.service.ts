@@ -89,6 +89,12 @@ export class LeadsService {
     return this.prisma.lead.update({
       where: { id },
       data: {
+        // Correção de dados: nome/empresa não podem virar vazios (mantém o
+        // valor atual); CNPJ pode ser limpo enviando string vazia.
+        name: dto.name === undefined ? undefined : dto.name.trim() || undefined,
+        company:
+          dto.company === undefined ? undefined : dto.company.trim() || undefined,
+        cnpj: dto.cnpj === undefined ? undefined : dto.cnpj.trim() || null,
         stage: dto.stage ?? undefined,
         // Permite limpar as anotações enviando string vazia.
         notes: dto.notes === undefined ? undefined : dto.notes.trim() || null,
