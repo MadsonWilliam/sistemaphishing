@@ -76,6 +76,21 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     ),
   },
   {
+    // Igual à NF-e, mas para transporte (frete). Faz mais sentido para
+    // transportadoras/operadoras logísticas — DACTE no lugar do DANFE.
+    name: 'Conhecimento de transporte eletrônico (CT-e)',
+    sector: 'LOGISTICA',
+    trigger: 'ATTACHMENT',
+    difficulty: 2,
+    subject: 'CT-e nº 04482 — {{dominio}}',
+    html: wrap(
+      `<p>Prezado(a) {{nome}},</p>
+       <p>Segue em anexo o conhecimento de transporte eletrônico (CT-e) referente ao último frete contratado. O XML e o DACTE estão no arquivo abaixo.</p>
+       ${fileCard('CTe_04482.pdf')}
+       <p><a href="{{anexo}}">Baixar DACTE (PDF)</a></p>`,
+    ),
+  },
+  {
     name: 'Fornecedor: atualização de dados bancários (BEC)',
     sector: 'COMPRAS',
     trigger: 'LINK',
@@ -186,6 +201,98 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
       { label: 'Atualizar pagamento', href: '{{link}}' },
     ),
   },
+  // ── Clássicos de phishing muito documentados na internet (kits/lures que
+  // golpistas reaproveitam no mundo todo), adaptados para o contexto BR.
+  {
+    name: 'Microsoft 365: atividade de login incomum',
+    sector: 'TI',
+    trigger: 'FORM',
+    difficulty: 3,
+    subject: 'Atividade de início de sessão incomum na sua conta',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>Detectamos um início de sessão incomum na conta <strong>{{email}}</strong> a partir de um novo dispositivo/localização. Se não foi você, sua conta pode estar comprometida.</p>
+       <p>Revise a atividade recente e confirme sua identidade para manter o acesso aos serviços.</p>`,
+      { label: 'Revisar atividade da conta', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Arquivo compartilhado via OneDrive',
+    sector: 'ADMINISTRATIVO',
+    trigger: 'LINK',
+    difficulty: 3,
+    subject: 'Um arquivo foi compartilhado com você',
+    html: wrap(
+      `<p>Olá,</p>
+       <p>Um arquivo foi compartilhado com <strong>{{email}}</strong> pelo OneDrive. O link é válido por tempo limitado.</p>
+       ${fileCard('Planilha_Orcamento_2026.xlsx')}
+       <p>Faça login com sua conta corporativa para visualizar o documento.</p>`,
+      { label: 'Abrir no OneDrive', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Documento para assinatura (DocuSign)',
+    sector: 'JURIDICO',
+    trigger: 'LINK',
+    difficulty: 3,
+    subject: 'Documento enviado para sua assinatura eletrônica',
+    html: wrap(
+      `<p>Prezado(a) {{nome}},</p>
+       <p>Um documento foi enviado para a sua assinatura eletrônica e aguarda ação. Revise e assine para concluir o processo.</p>
+       ${fileCard('Contrato_Prestacao_de_Servicos.pdf')}`,
+      { label: 'Revisar e assinar', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Mensagens retidas em quarentena',
+    sector: 'TI',
+    trigger: 'LINK',
+    difficulty: 3,
+    subject: 'Você tem 3 mensagens retidas — ação necessária',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>O filtro de segurança reteve <strong>3 mensagens</strong> destinadas a <strong>{{email}}</strong>. Revise e libere as mensagens legítimas antes que sejam removidas em 24 horas.</p>`,
+      { label: 'Revisar mensagens em quarentena', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Caixa de e-mail quase cheia',
+    sector: 'TI',
+    trigger: 'FORM',
+    difficulty: 2,
+    subject: 'Seu armazenamento de e-mail está em 98%',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>A caixa <strong>{{email}}</strong> atingiu 98% da capacidade. Ao chegar a 100% você deixará de receber novas mensagens. Amplie o armazenamento para continuar recebendo e-mails.</p>`,
+      { label: 'Ampliar armazenamento', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Correios: objeto com taxa pendente',
+    sector: 'LOGISTICA',
+    trigger: 'LINK',
+    difficulty: 1,
+    subject: 'Seu objeto está retido — taxa pendente',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>Um objeto endereçado a você está retido em nossa unidade por uma taxa pendente. Regularize o pagamento em até 48h para liberar a entrega e evitar a devolução ao remetente.</p>`,
+      { label: 'Regularizar e liberar objeto', href: '{{link}}' },
+    ),
+  },
+  {
+    name: 'Comprovante de transferência (PIX)',
+    sector: 'FINANCEIRO',
+    trigger: 'ATTACHMENT',
+    difficulty: 2,
+    subject: 'Comprovante de pagamento — PIX realizado',
+    html: wrap(
+      `<p>Olá {{nome}},</p>
+       <p>Segue o comprovante do PIX realizado para a conta vinculada a <strong>{{email}}</strong>. Confira os dados no anexo e nos avise em caso de divergência.</p>
+       ${fileCard('Comprovante_PIX.pdf')}
+       <p><a href="{{anexo}}">Abrir comprovante</a></p>`,
+    ),
+  },
+
   // ── Iscas com QR code (quishing) — o {{qr}} vira o QR do link de clique.
   // Recomendado usar com comportamento pós-clique "Formulário" (vira "submeteu").
   {
