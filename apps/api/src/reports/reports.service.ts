@@ -85,7 +85,7 @@ export class ReportsService {
   async buildReport(campaignId: string, scopeCompanyId?: string) {
     const campaign = await this.campaigns.findOne(campaignId, scopeCompanyId);
     const stats = await this.campaigns.getStats(campaignId, scopeCompanyId);
-    const { funnel, rates, byDepartment } = stats;
+    const { funnel, rates, byDepartment, byRecipient } = stats;
     const recs: Recommendation[] = [];
 
     // 1) Setor mais vulnerável (acima da média geral de cliques).
@@ -215,6 +215,7 @@ export class ReportsService {
         headline: `${funnel.clicked} de ${funnel.total} pessoas (${rates.compromiseRate}%) cairiam num golpe real.`,
       },
       byDepartment,
+      byRecipient,
       recommendations: recs,
       evolution,
       benchmarkNote:

@@ -253,6 +253,40 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
       };
     });
 
+    // Recorte por colaborador (caixa de e-mail) — quem abriu/clicou/enviou dados.
+    const targets = await this.prisma.campaignTarget.findMany({
+      where: base,
+      select: {
+        toEmail: true,
+        toName: true,
+        department: true,
+        openedAt: true,
+        clickedAt: true,
+        submittedAt: true,
+        reportedAt: true,
+      },
+    });
+    // Risco por pessoa: enviou dados > clicou > abriu > sem interação.
+    const riskRank = (r: {
+      submitted: boolean;
+      clicked: boolean;
+      opened: boolean;
+    }) => (r.submitted ? 3 : r.clicked ? 2 : r.opened ? 1 : 0);
+    const byRecipient = targets
+      .map((t) => ({
+        email: t.toEmail,
+        name: t.toName ?? '',
+        department: t.department ?? '—',
+        opened: !!t.openedAt,
+        clicked: !!t.clickedAt,
+        submitted: !!t.submittedAt,
+        reported: !!t.reportedAt,
+      }))
+      .sort((a, b) => {
+        const diff = riskRank(b) - riskRank(a); // mais expostos primeiro
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
+
     // Transparência: acessos automáticos (proxy/scanner) filtrados do funil.
     const botEvents = await this.prisma.trackingEvent.groupBy({
       by: ['type'],
@@ -279,6 +313,7 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
         compromiseRate: rate(clicked), // % que "caiu" (clicou/abriu anexo)
       },
       byDepartment: byDepartment.sort((a, b) => b.clickRate - a.clickRate),
+      byRecipient,
     };
   }
 

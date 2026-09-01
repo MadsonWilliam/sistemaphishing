@@ -30,6 +30,15 @@ interface ReportData {
     clicked: number;
     clickRate: number;
   }[];
+  byRecipient: {
+    email: string;
+    name: string;
+    department: string;
+    opened: boolean;
+    clicked: boolean;
+    submitted: boolean;
+    reported: boolean;
+  }[];
   recommendations: { severity: string; title: string; detail: string }[];
   evolution: {
     trend: string;
@@ -71,6 +80,34 @@ export function renderReportPage(d: ReportData): string {
           <div style="width:${w}%;background:${c};height:10px;border-radius:6px"></div>
         </div>
       </div>`;
+    })
+    .join('');
+
+  // Recorte por colaborador (caixa) — pior desfecho de cada pessoa vira o status.
+  const statusOf = (r: ReportData['byRecipient'][number]) => {
+    if (r.submitted) return { label: 'Enviou dados', color: '#dc2626', bg: '#fef2f2' };
+    if (r.clicked) return { label: 'Clicou no link', color: '#d97706', bg: '#fffbeb' };
+    if (r.reported) return { label: 'Reportou ✓', color: '#16a34a', bg: '#f0fdf4' };
+    if (r.opened) return { label: 'Abriu o e-mail', color: '#0891b2', bg: '#ecfeff' };
+    return { label: 'Sem interação', color: '#64748b', bg: '#f8fafc' };
+  };
+  const recipientRows = d.byRecipient
+    .map((r) => {
+      const st = statusOf(r);
+      const who = r.name
+        ? `<div style="font-weight:600">${esc(r.name)}</div><div style="font-size:12px;color:#64748b">${esc(r.email)}</div>`
+        : `<div style="font-weight:600">${esc(r.email)}</div>`;
+      const reportTag =
+        r.reported && (r.clicked || r.submitted)
+          ? ` <span style="font-size:11px;color:#16a34a">· reportou</span>`
+          : '';
+      return `<tr style="border-top:1px solid #eef2f7">
+        <td style="padding:9px 8px;vertical-align:top">${who}</td>
+        <td style="padding:9px 8px;vertical-align:top;color:#475569">${esc(r.department)}</td>
+        <td style="padding:9px 8px;vertical-align:top;text-align:right;white-space:nowrap">
+          <span style="background:${st.bg};color:${st.color};font-weight:600;font-size:13px;padding:3px 10px;border-radius:999px">${st.label}</span>${reportTag}
+        </td>
+      </tr>`;
     })
     .join('');
 
@@ -125,6 +162,22 @@ export function renderReportPage(d: ReportData): string {
   ${
     d.byDepartment.length
       ? `<div class="card"><h2>Vulnerabilidade por setor</h2>${sectorRows}</div>`
+      : ''
+  }
+
+  ${
+    d.byRecipient.length
+      ? `<div class="card"><h2>Resultado por colaborador</h2>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr style="text-align:left;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.04em">
+              <th style="padding:0 8px 8px">Colaborador</th>
+              <th style="padding:0 8px 8px">Setor</th>
+              <th style="padding:0 8px 8px;text-align:right">Status</th>
+            </tr></thead>
+            <tbody>${recipientRows}</tbody>
+          </table>
+          <div style="font-size:12px;color:#94a3b8;margin-top:12px">Recorte individual por caixa de e-mail (do desfecho mais grave ao mais seguro). Documento confidencial — uso interno de conscientização.</div>
+        </div>`
       : ''
   }
 
