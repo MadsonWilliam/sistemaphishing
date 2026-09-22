@@ -293,6 +293,24 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
     ),
   },
 
+  {
+    name: 'Reforma Tributária: novas regras para condomínios',
+    sector: 'ADMINISTRATIVO',
+    trigger: 'LINK',
+    difficulty: 3,
+    subject: 'Reforma Tributária: o que muda na gestão do seu condomínio',
+    html: wrap(
+      `<p>Prezado(a) {{nome}},</p>
+       <p>Com a entrada em vigor das novas regras da <strong>Reforma Tributária</strong>, a administração de condomínios passa a ter obrigações específicas quanto ao recolhimento de tributos sobre taxas, rateios e serviços contratados.</p>
+       <p>Preparamos um material de orientação com o resumo das mudanças, o cronograma de adequação e o passo a passo aplicável à gestão condominial de <strong>{{empresa}}</strong>.</p>
+       <ul style="margin:0 0 4px 0;padding-left:20px">
+         <li>Novo enquadramento das taxas e do fundo de reserva</li>
+         <li>Prazos de adequação e obrigações acessórias</li>
+         <li>Impactos para síndicos e administradoras</li>
+       </ul>`,
+      { label: 'Acessar orientação completa', href: '{{link}}' },
+    ),
+  },
   // ── Iscas com QR code (quishing) — o {{qr}} vira o QR do link de clique.
   // Recomendado usar com comportamento pós-clique "Formulário" (vira "submeteu").
   {
