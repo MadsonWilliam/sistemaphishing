@@ -311,6 +311,20 @@ export const TEMPLATE_LIBRARY: LibraryTemplate[] = [
       { label: 'Acessar orientação completa', href: '{{link}}' },
     ),
   },
+  {
+    name: 'Notificação extrajudicial — condomínio administrado',
+    sector: 'JURIDICO',
+    trigger: 'LINK',
+    difficulty: 3,
+    subject: 'Notificação extrajudicial — condomínio sob administração de {{empresa}}',
+    html: wrap(
+      `<p>Prezado(a) {{nome}},</p>
+       <p>Consta em nosso sistema uma <strong>notificação extrajudicial</strong> referente a um dos condomínios sob administração de <strong>{{empresa}}</strong>, com pendência que requer manifestação do responsável.</p>
+       <p>O prazo para ciência e resposta é de <strong>5 (cinco) dias úteis</strong> a contar do recebimento desta. Acesse a íntegra da notificação para verificar o condomínio, o objeto e as providências solicitadas.</p>
+       <p style="font-size:13px;color:#5f6368">Referência interna: NE-{{dominio}}/2026</p>`,
+      { label: 'Acessar notificação', href: '{{link}}' },
+    ),
+  },
   // ── Iscas com QR code (quishing) — o {{qr}} vira o QR do link de clique.
   // Recomendado usar com comportamento pós-clique "Formulário" (vira "submeteu").
   {
