@@ -468,7 +468,8 @@ export class CampaignsService implements OnModuleInit, OnModuleDestroy {
     const startAt = campaign.scheduledStartAt ?? new Date();
     const result = await this.outbox.enqueueDrip(items, {
       startAt,
-      windowSeconds: campaign.dripWindowSeconds,
+      // dripWindowSeconds guarda o "tempo entre um envio e outro" (rótulo da UI).
+      spacingSeconds: campaign.dripWindowSeconds,
       jitterSeconds: campaign.dripJitterSeconds,
     });
 

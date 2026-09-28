@@ -33,12 +33,12 @@ export class DripTestDto {
   @IsString()
   companyId?: string;
 
-  // Janela (segundos) para espalhar os envios.
+  // Intervalo (segundos) entre um envio e o próximo (gota-a-gota).
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(86400)
-  windowSeconds?: number;
+  spacingSeconds?: number;
 
   @IsOptional()
   @IsInt()

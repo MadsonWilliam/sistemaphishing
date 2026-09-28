@@ -38,7 +38,7 @@ export class OutboxController {
         html: dto.html,
       })),
       {
-        windowSeconds: dto.windowSeconds ?? 0,
+        spacingSeconds: dto.spacingSeconds ?? 0,
         jitterSeconds: dto.jitterSeconds ?? 0,
       },
     );

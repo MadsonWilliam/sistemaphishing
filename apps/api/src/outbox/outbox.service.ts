@@ -24,8 +24,10 @@ export interface OutboxItem {
 
 export interface DripOptions {
   startAt?: Date;
-  // Janela total (segundos) na qual espalhar os envios (gota-a-gota).
-  windowSeconds: number;
+  // Intervalo (segundos) ENTRE um envio e o próximo (gota-a-gota). O item i é
+  // agendado para start + spacing*i, então o intervalo entre dois envios
+  // consecutivos é EXATAMENTE este valor (não uma janela total dividida pelo lote).
+  spacingSeconds: number;
   // Jitter aleatório (segundos) somado/subtraído do horário de cada item.
   jitterSeconds?: number;
 }
@@ -85,15 +87,15 @@ export class OutboxService implements OnModuleInit, OnModuleDestroy {
     return { enqueued: res.count };
   }
 
-  // Enfileira em modo gota-a-gota: espalha os itens ao longo da janela com jitter.
+  // Enfileira em modo gota-a-gota: agenda cada item `spacingSeconds` após o
+  // anterior (intervalo fixo entre envios), com jitter opcional.
   async enqueueDrip(items: OutboxItem[], opts: DripOptions) {
     const start = opts.startAt ?? new Date();
-    const n = items.length;
     const jitter = (opts.jitterSeconds ?? 0) * 1000;
-    const window = Math.max(opts.windowSeconds, 0) * 1000;
+    const spacing = Math.max(opts.spacingSeconds, 0) * 1000;
 
     const scheduled = items.map((item, idx) => {
-      const base = n > 1 ? (window * idx) / (n - 1) : 0;
+      const base = spacing * idx;
       const rand = jitter > 0 ? (Math.random() * 2 - 1) * jitter : 0;
       const when = new Date(Math.max(Date.now(), start.getTime() + base + rand));
       return { ...item, scheduledAt: when };
