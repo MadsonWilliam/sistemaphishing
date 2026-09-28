@@ -53,7 +53,9 @@ export class OutboxController {
         : {};
     return this.prisma.emailOutbox.findMany({
       where,
-      orderBy: { scheduledAt: 'asc' },
+      // Mais recentes primeiro: com a fila grande, os últimos envios ficam no
+      // topo em vez de somem atrás do corte de 200.
+      orderBy: [{ scheduledAt: 'desc' }, { id: 'desc' }],
       take: 200,
       select: {
         id: true,
