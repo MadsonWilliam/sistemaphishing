@@ -66,7 +66,8 @@ export function NewCampaign() {
     postClickBehavior: 'EDUCATIONAL',
     showReportButton: true,
     microTraining: false,
-    dripWindowSeconds: 0,
+    // Intervalo entre um envio e outro (segundos). Default 15 (tick do agendador).
+    dripWindowSeconds: '15',
     brandLogoUrl: '',
     brandColor: '',
     brandColor2: '',
@@ -186,7 +187,11 @@ export function NewCampaign() {
         postClickBehavior: f.postClickBehavior,
         showReportButton: f.showReportButton,
         microTraining: f.microTraining,
-        dripWindowSeconds: Number(f.dripWindowSeconds),
+        // Vazio = "não selecionou nada" → usa o padrão de 15s.
+        dripWindowSeconds:
+          String(f.dripWindowSeconds).trim() === ''
+            ? 15
+            : Number(f.dripWindowSeconds),
         brandLogoUrl: f.brandLogoUrl.trim() || undefined,
         brandColor: f.brandColor.trim() || undefined,
         brandColor2: f.brandColor2.trim() || undefined,
@@ -394,9 +399,18 @@ export function NewCampaign() {
           <Field
             label="Gota-a-gota — tempo entre um envio e outro (segundos)"
             type="number"
+            min={0}
+            placeholder="15"
             value={f.dripWindowSeconds}
-            onChange={(e) => setF({ ...f, dripWindowSeconds: Number(e.target.value) })}
+            onChange={(e) => setF({ ...f, dripWindowSeconds: e.target.value })}
           />
+          <p className="text-xs text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
+            ⏳ É o intervalo entre <strong>cada e-mail</strong> — ex.: <code>30</code>{' '}
+            envia um a cada 30s (mais realista e reduz o risco de bloqueio por
+            spam). <strong>Recomendado 15s ou mais</strong>: o disparador roda a
+            cada 15s, então valores menores não são respeitados com precisão.
+            Deixe em branco para usar o padrão de <strong>15s</strong>.
+          </p>
           <p className="text-xs text-slate-500">
             🔗 O domínio dos links é o <strong>mesmo do remetente</strong>{' '}
             escolhido — ex.: remetente <code>contabilmaisbrasil.com.br</code> →
