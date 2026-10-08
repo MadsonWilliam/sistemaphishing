@@ -1,6 +1,7 @@
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { TEMPLATE_LIBRARY } from './templates-library';
+import { seedDemo } from './demo-seed';
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,11 @@ async function main() {
     await seedTemplates();
   } catch (e) {
     console.error('[seed] biblioteca de iscas falhou (seguindo):', e);
+  }
+  try {
+    await seedDemo(prisma);
+  } catch (e) {
+    console.error('[seed] demo falhou (seguindo):', e);
   }
 }
 
