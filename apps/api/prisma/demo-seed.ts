@@ -83,11 +83,16 @@ export async function seedDemo(prisma: PrismaClient) {
   });
 
   // 2) Campanha demo concluída (SENT) — sem nada na fila de envio.
+  // createdAt ANTIGO de propósito: a lista ordena por createdAt desc, então o
+  // demo fica SEMPRE por último (nunca vira a campanha padrão da dash nem se
+  // mistura no topo com as campanhas reais). Nenhuma tela exibe essa data.
+  const PINNED_OLD = new Date('2000-01-01T00:00:00Z');
   await prisma.campaign.upsert({
     where: { id: DEMO_CAMPAIGN_ID },
     update: {
       status: CampaignStatus.SENT,
       name: 'Demonstração — Reforma Tributária (condomínios)',
+      createdAt: PINNED_OLD,
     },
     create: {
       id: DEMO_CAMPAIGN_ID,
@@ -99,6 +104,7 @@ export async function seedDemo(prisma: PrismaClient) {
       showReportButton: true,
       scheduledStartAt: start,
       reportToken: DEMO_REPORT_TOKEN,
+      createdAt: PINNED_OLD,
     },
   });
 
