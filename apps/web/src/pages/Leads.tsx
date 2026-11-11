@@ -161,8 +161,13 @@ export function Leads() {
   });
 
   const sendTerm = useMutation({
-    mutationFn: async (id: string) =>
-      (await api.post<Lead>(`/leads/${id}/send-term`)).data,
+    mutationFn: async (v: { id: string; email?: string }) =>
+      (
+        await api.post<Lead>(
+          `/leads/${v.id}/send-term`,
+          v.email ? { email: v.email } : {},
+        )
+      ).data,
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['leads'] });
       setDetail((d) => (d && d.id === updated.id ? updated : d));
@@ -412,7 +417,7 @@ export function Leads() {
           onSaveNotes={(notes) => patch.mutate({ id: detail.id, notes })}
           onSaveInfo={(v) => patch.mutate({ id: detail.id, ...v })}
           saving={patch.isPending}
-          onSendTerm={() => sendTerm.mutate(detail.id)}
+          onSendTerm={(email) => sendTerm.mutate({ id: detail.id, email })}
           termSending={sendTerm.isPending}
           termError={
             sendTerm.isError
@@ -480,7 +485,7 @@ function LeadDetail({
   onSaveNotes: (notes: string) => void;
   onSaveInfo: (v: { name?: string; company?: string; cnpj?: string }) => void;
   saving: boolean;
-  onSendTerm: () => void;
+  onSendTerm: (email?: string) => void;
   termSending: boolean;
   termError: string | null;
   onCreateCompany: () => void;
@@ -519,6 +524,8 @@ function LeadDetail({
   const [value, setValue] = useState(lead.proposalValue ?? '');
   const [conditions, setConditions] = useState(lead.proposalConditions ?? '');
   const [meeting, setMeeting] = useState(toLocalInput(lead.meetingAt));
+  // Override opcional do destino do termo (vazio = e-mail do lead).
+  const [termEmail, setTermEmail] = useState('');
   const fmtDateTime = (iso: string) =>
     new Date(iso).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -738,7 +745,14 @@ function LeadDetail({
               <div className="text-xs text-slate-300 font-medium">
                 📄 Termo de autorização do teste
               </div>
-              <Btn onClick={onSendTerm} disabled={termSending}>
+              <Btn
+                onClick={() => onSendTerm(termEmail.trim() || undefined)}
+                disabled={
+                  termSending ||
+                  (!!termEmail.trim() &&
+                    !/^\S+@\S+\.\S+$/.test(termEmail.trim()))
+                }
+              >
                 {termSending
                   ? 'Enviando…'
                   : lead.termSentAt
@@ -746,6 +760,18 @@ function LeadDetail({
                     : 'Enviar termo'}
               </Btn>
             </div>
+            <label className="block mt-2">
+              <span className="block text-[11px] text-slate-400 mb-1">
+                Enviar para outro e-mail (opcional)
+              </span>
+              <input
+                type="email"
+                value={termEmail}
+                onChange={(e) => setTermEmail(e.target.value)}
+                placeholder={lead.email}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+              />
+            </label>
             <div className="text-xs mt-2">
               {lead.termSentAt ? (
                 <span className="text-emerald-400">
@@ -760,7 +786,14 @@ function LeadDetail({
             )}
             <div className="text-[11px] text-slate-600 mt-2 leading-relaxed">
               Envia o termo (com empresa, CNPJ, responsável e domínio) para{' '}
-              <strong>{lead.email}</strong>. O cliente autoriza{' '}
+              <strong>{termEmail.trim() || lead.email}</strong>
+              {termEmail.trim() && (
+                <span className="text-slate-500">
+                  {' '}
+                  (em vez de {lead.email})
+                </span>
+              )}
+              . O cliente autoriza{' '}
               <strong>respondendo "De acordo"</strong> por e-mail — aí você move
               o card para <strong>Campanha Teste</strong>.
             </div>

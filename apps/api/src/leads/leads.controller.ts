@@ -11,7 +11,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import { LeadsService } from './leads.service';
-import { CreateLeadDto, UpdateLeadDto } from './dto/lead.dto';
+import { CreateLeadDto, SendTermDto, UpdateLeadDto } from './dto/lead.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 
@@ -46,8 +46,8 @@ export class LeadsController {
   @Roles(Role.SUPER_ADMIN)
   @Post(':id/send-term')
   @HttpCode(200)
-  sendTerm(@Param('id') id: string) {
-    return this.leads.sendTerm(id);
+  sendTerm(@Param('id') id: string, @Body() dto: SendTermDto) {
+    return this.leads.sendTerm(id, dto.email);
   }
 
   // Cria a Empresa (tenant) a partir do lead — habilita rodar campanhas.

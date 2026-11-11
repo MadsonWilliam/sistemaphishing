@@ -137,11 +137,14 @@ export class LeadsService {
   // Envia o TERMO DE AUTORIZAÇÃO ao cliente (aceite por resposta ao e-mail).
   // Registra termSentAt. O operador move o estágio manualmente quando o cliente
   // responder "De acordo".
-  async sendTerm(id: string): Promise<Lead> {
+  async sendTerm(id: string, overrideEmail?: string): Promise<Lead> {
     const lead = await this.prisma.lead.findUnique({ where: { id } });
     if (!lead) {
       throw new NotFoundException('Lead não encontrado.');
     }
+    // Permite redirecionar o termo para outro endereço (ex.: responsável
+    // jurídico) sem alterar o contato do lead. Vazio = usa o e-mail do lead.
+    const toEmail = overrideEmail?.toLowerCase().trim() || lead.email;
     const domain = await this.pickSendingDomain();
     if (!domain) {
       throw new BadRequestException(
@@ -161,7 +164,7 @@ export class LeadsService {
       await this.smtp.send(cfg, {
         fromEmail,
         fromName: 'Nexium Solutions',
-        toEmail: lead.email,
+        toEmail,
         toName: lead.name,
         subject: `Autorização de simulação de phishing — ${lead.company}`,
         html: authorizationTermHtml(lead),

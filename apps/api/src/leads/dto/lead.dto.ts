@@ -107,3 +107,11 @@ export class UpdateLeadDto {
   @MaxLength(40)
   meetingAt?: string;
 }
+
+// Envio do termo de autorização. Permite redirecionar para um e-mail diferente
+// do contato do lead (sem alterar o contato), ex.: responsável jurídico.
+export class SendTermDto {
+  @IsOptional()
+  @IsEmail({}, { message: 'E-mail inválido.' })
+  email?: string;
+}
