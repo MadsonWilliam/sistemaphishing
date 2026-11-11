@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -101,11 +102,21 @@ export class CompaniesService {
     if (!user || user.companyId !== companyId) {
       throw new NotFoundException('Usuário não encontrado nesta empresa.');
     }
-    const data: { name?: string; passwordHash?: string } = {};
+    const data: { name?: string; email?: string; passwordHash?: string } = {};
     if (dto.name !== undefined && dto.name.trim()) data.name = dto.name.trim();
     if (dto.password) data.passwordHash = await bcrypt.hash(dto.password, 12);
+    if (dto.email !== undefined) {
+      const email = dto.email.toLowerCase().trim();
+      if (email && email !== user.email) {
+        const taken = await this.prisma.user.findUnique({ where: { email } });
+        if (taken) {
+          throw new BadRequestException('Já existe um usuário com este e-mail.');
+        }
+        data.email = email;
+      }
+    }
 
-    if (!data.name && !data.passwordHash) {
+    if (!data.name && !data.email && !data.passwordHash) {
       return this.prisma.user.update({
         where: { id: userId },
         data: {},

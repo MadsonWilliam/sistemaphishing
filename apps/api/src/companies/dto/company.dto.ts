@@ -46,6 +46,10 @@ export class UpdateCompanyUserDto {
   name?: string;
 
   @IsOptional()
+  @IsEmail({}, { message: 'E-mail inválido.' })
+  email?: string;
+
+  @IsOptional()
   @IsString()
   @MinLength(8, { message: 'A nova senha deve ter ao menos 8 caracteres.' })
   password?: string;

@@ -275,14 +275,17 @@ function UserEditor({
 }) {
   const qc = useQueryClient();
   const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
   const [password, setPassword] = useState('');
   const [ok, setOk] = useState(false);
   const [error, setError] = useState('');
 
   const save = useMutation({
     mutationFn: async () => {
-      const body: { name?: string; password?: string } = {};
+      const body: { name?: string; email?: string; password?: string } = {};
       if (name.trim() && name.trim() !== user.name) body.name = name.trim();
+      if (email.trim() && email.trim().toLowerCase() !== user.email)
+        body.email = email.trim();
       if (password) body.password = password;
       return (
         await api.patch(`/companies/${companyId}/users/${user.id}`, body)
@@ -302,7 +305,12 @@ function UserEditor({
     },
   });
 
-  const dirty = (name.trim() && name.trim() !== user.name) || !!password;
+  const emailChanged = email.trim().toLowerCase() !== user.email;
+  const emailInvalid = emailChanged && !/^\S+@\S+\.\S+$/.test(email.trim());
+  const dirty =
+    (name.trim() && name.trim() !== user.name) ||
+    (emailChanged && !!email.trim()) ||
+    !!password;
   const pwTooShort = !!password && password.length < 8;
 
   return (
@@ -324,6 +332,17 @@ function UserEditor({
         </label>
         <label className="block">
           <span className="block text-[11px] text-slate-400 mb-1">
+            E-mail (login)
+          </span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg text-sm px-2 py-2 focus:border-brand-500 outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-[11px] text-slate-400 mb-1">
             Nova senha
           </span>
           <input
@@ -338,7 +357,7 @@ function UserEditor({
       <div className="mt-2 flex items-center gap-3">
         <Btn
           onClick={() => save.mutate()}
-          disabled={save.isPending || !dirty || pwTooShort}
+          disabled={save.isPending || !dirty || pwTooShort || emailInvalid}
         >
           {save.isPending ? 'Salvando…' : 'Salvar'}
         </Btn>
@@ -346,6 +365,9 @@ function UserEditor({
           <span className="text-[11px] text-amber-400">
             Senha: mínimo 8 caracteres.
           </span>
+        )}
+        {emailInvalid && (
+          <span className="text-[11px] text-amber-400">E-mail inválido.</span>
         )}
         {ok && <span className="text-[11px] text-emerald-400">Salvo ✓</span>}
         {error && <span className="text-[11px] text-red-400">{error}</span>}
