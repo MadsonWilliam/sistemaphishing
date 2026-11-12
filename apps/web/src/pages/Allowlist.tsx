@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Card, PageHeader } from '../components/ui';
 
 interface Domain {
   id: string;
   domain: string;
-  smtpHost: string;
+  status?: string;
 }
 
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
@@ -36,10 +37,15 @@ function Guide({
 }
 
 export function Allowlist() {
+  const { user } = useAuth();
+  const isSuper = user?.role === 'SUPER_ADMIN';
   const [copied, setCopied] = useState(false);
+  // Remetentes disponíveis ao escopo: o cliente vê os domínios de envio das
+  // iscas (os dois); o super admin vê todos. Endpoint liberado p/ company_admin.
   const domains = useQuery({
-    queryKey: ['sending-domains'],
-    queryFn: async () => (await api.get<Domain[]>('/sending-domains')).data,
+    queryKey: ['allowlist-domains'],
+    queryFn: async () =>
+      (await api.get<Domain[]>('/sending-domains/available')).data,
   });
   const [sel, setSel] = useState('');
   const domain = useMemo(
@@ -48,6 +54,12 @@ export function Allowlist() {
   );
   const dom = domain?.domain ?? 'seu-dominio.com.br';
 
+  // Todos os domínios de envio (lista a enviar ao TI — cobre os dois de uma vez).
+  const domainList =
+    domains.data && domains.data.length ? domains.data.map((d) => d.domain) : [dom];
+  const multi = domainList.length > 1;
+  const bullets = domainList.map((d) => `  • Domínio de envio: ${d}`).join('\n');
+
   const brief = `Prezado time de TI,
 
 Vamos conduzir um teste AUTORIZADO de conscientização de phishing com os
@@ -55,13 +67,13 @@ colaboradores. Para que os resultados sejam fiéis, é essencial que os e-mails
 de simulação NÃO sejam bloqueados, colocados em quarentena, nem tenham os links
 reescritos/pré-escaneados pelo gateway de segurança.
 
-Por favor, adicione o seguinte remetente à lista de permissão (allowlist),
+Por favor, adicione ${multi ? 'os seguintes remetentes' : 'o seguinte remetente'} à lista de permissão (allowlist),
 desativando filtro de spam/phishing, sandbox/detonação e reescrita de links
-(ex.: Safe Links, URL Defense) SOMENTE para este remetente:
+(ex.: Safe Links, URL Defense) SOMENTE para ${multi ? 'estes remetentes' : 'este remetente'}:
 
-  • Domínio de envio: ${dom}
+${bullets}
 
-Isso vale apenas para a janela do teste e apenas para este domínio.
+Isso vale apenas para a janela do teste e apenas para ${multi ? 'estes domínios' : 'este domínio'}.
 Obrigado!`;
 
   return (
@@ -73,12 +85,27 @@ Obrigado!`;
 
       <Card className="p-4 mb-6 border-amber-500/30 bg-amber-500/5">
         <p className="text-sm text-slate-300">
-          Sem allowlisting, nossas 3 camadas anti-scanner já protegem os dados
-          (ótimo para prospects/trials). Mas para <strong>clientes ativos</strong>,
-          pedir ao TI do cliente para liberar nosso domínio de envio elimina de
-          vez qualquer interferência de scanner —{' '}
-          <strong>é o padrão da indústria</strong> (KnowBe4, Cofense) e vira um
-          diferencial de implantação profissional.
+          {isSuper ? (
+            <>
+              Sem allowlisting, nossas 3 camadas anti-scanner já protegem os
+              dados (ótimo para prospects/trials). Mas para{' '}
+              <strong>clientes ativos</strong>, pedir ao TI do cliente para
+              liberar nosso domínio de envio elimina de vez qualquer
+              interferência de scanner — <strong>é o padrão da indústria</strong>{' '}
+              (KnowBe4, Cofense) e vira um diferencial de implantação
+              profissional.
+            </>
+          ) : (
+            <>
+              Para que o teste reflita <strong>pessoas reais</strong>, peça ao seu
+              time de TI para liberar{' '}
+              {multi ? 'os domínios de envio abaixo' : 'o domínio de envio abaixo'}{' '}
+              na lista de permissão (allowlist) — assim nenhum filtro de spam ou
+              scanner de links interfere nos resultados. É o{' '}
+              <strong>padrão da indústria</strong> (KnowBe4, Cofense). Abaixo há
+              uma mensagem pronta para copiar e os passos por provedor.
+            </>
+          )}
         </p>
       </Card>
 
@@ -104,7 +131,11 @@ Obrigado!`;
       {/* Texto pronto para enviar ao TI do cliente */}
       <Card className="p-4 mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="font-medium">Mensagem pronta para o TI do cliente</div>
+          <div className="font-medium">
+            {isSuper
+              ? 'Mensagem pronta para o TI do cliente'
+              : 'Mensagem pronta para o seu time de TI'}
+          </div>
           <button
             onClick={() => {
               navigator.clipboard.writeText(brief);
@@ -122,6 +153,13 @@ Obrigado!`;
       </Card>
 
       {/* Guias por provedor */}
+      {multi && (
+        <p className="text-xs text-slate-400 mb-3">
+          Os passos abaixo mostram o domínio <code>{dom}</code>. Repita o mesmo
+          para o outro domínio usando o seletor acima — ou simplesmente envie a
+          mensagem pronta, que já cobre os dois.
+        </p>
+      )}
       <div className="grid lg:grid-cols-2 gap-4">
         <Guide title="Microsoft 365 / Defender">
           <Step n={1}>
@@ -184,11 +222,31 @@ Obrigado!`;
             quarentenar</strong> mensagens de <code>{dom}</code> durante o teste.
           </Step>
         </Guide>
+
+        <Guide title="KingHost">
+          <Step n={1}>
+            Painel KingHost (<code>painel.kinghost.com.br</code>) →{' '}
+            <strong>E-mails</strong> → selecione a conta →{' '}
+            <strong>Antispam</strong>: adicione <code>{dom}</code> à{' '}
+            <strong>Lista branca</strong> (remetentes liberados).
+          </Step>
+          <Step n={2}>
+            No <strong>Antispam avançado</strong> (quando disponível): em{' '}
+            <strong>Remetentes confiáveis</strong>, libere{' '}
+            <code>@{dom}</code> — sem filtragem, sem quarentena.
+          </Step>
+          <Step n={3}>
+            No <strong>webmail</strong> da KingHost, marque as mensagens de{' '}
+            <code>@{dom}</code> como <strong>"Não é spam"</strong> e crie um
+            filtro para não movê-las para o Lixo Eletrônico.
+          </Step>
+        </Guide>
       </div>
 
       <p className="text-xs text-slate-500 mt-6">
-        Dica: peça também para <strong>manter SPF/DKIM/DMARC do domínio válidos</strong>{' '}
-        (veja em "Domínios") — isso melhora a entrega e a confiança do allowlist.
+        Dica: manter <strong>SPF/DKIM/DMARC válidos</strong>
+        {isSuper ? ' (veja em "Domínios")' : ''} melhora a entrega e a confiança
+        do allowlist.
       </p>
     </div>
   );

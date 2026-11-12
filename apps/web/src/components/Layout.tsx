@@ -8,7 +8,7 @@ const nav = [
   { to: '/leads', label: 'Leads', superOnly: true },
   { to: '/companies', label: 'Empresas', superOnly: true },
   { to: '/domains', label: 'Domínios', superOnly: true },
-  { to: '/allowlist', label: 'Allowlist', superOnly: true },
+  { to: '/allowlist', label: 'Allowlist' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

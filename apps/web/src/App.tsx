@@ -62,7 +62,7 @@ export default function App() {
       <Route path="/leads" element={<Protected superOnly><Leads /></Protected>} />
       <Route path="/companies" element={<Protected superOnly><Companies /></Protected>} />
       <Route path="/domains" element={<Protected superOnly><Domains /></Protected>} />
-      <Route path="/allowlist" element={<Protected superOnly><Allowlist /></Protected>} />
+      <Route path="/allowlist" element={<Protected><Allowlist /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
