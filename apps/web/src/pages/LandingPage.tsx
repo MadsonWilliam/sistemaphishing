@@ -263,14 +263,7 @@ export function LandingPage() {
                   de experiência real em TI, infraestrutura e segurança da
                   informação.
                 </p>
-                <p className="text-slate-400 leading-relaxed mb-6">
-                  O que já funcionava no dia a dia desses clientes virou produto
-                  pela{' '}
-                  <strong className="text-slate-200">Nexium Solutions</strong>, a
-                  vertente de software do grupo. É engenharia de quem vive o
-                  problema — não teoria de catálogo.
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 mt-6">
                   <a
                     href="https://gruposolutions.net/"
                     target="_blank"
@@ -291,18 +284,18 @@ export function LandingPage() {
               </div>
 
               <div className="grid gap-4">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-28 grid place-items-center px-6">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-24 grid place-items-center px-6">
                   <img
                     src="/logo-rstech.png"
                     alt="RS Tech Solutions"
-                    className="max-h-12 max-w-[220px] w-auto object-contain opacity-90"
+                    className="h-12 w-auto max-w-[230px] object-contain opacity-90"
                   />
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-28 grid place-items-center px-6">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-24 grid place-items-center px-6">
                   <img
                     src="/logo-sctech.png"
                     alt="SC Tech Solutions"
-                    className="max-h-16 max-w-[220px] w-auto object-contain opacity-90"
+                    className="h-12 w-auto max-w-[230px] object-contain opacity-90"
                   />
                 </div>
                 <div className="text-center text-xs text-slate-500">
