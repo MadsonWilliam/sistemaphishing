@@ -240,6 +240,79 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* Origem — nascido no Grupo Solutions */}
+        <section className="max-w-6xl mx-auto px-6 pb-20">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 sm:p-12">
+            <div className="grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 mb-5">
+                  🏗️ Nascido na operação, não num slide
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
+                  Veio de quem já protege empresas de verdade.
+                </h2>
+                <p className="text-slate-300 leading-relaxed mb-4">
+                  O NexGuard começou como uma{' '}
+                  <strong className="text-white">
+                    solução interna de segurança
+                  </strong>
+                  , criada para proteger os clientes das empresas do{' '}
+                  <strong className="text-white">Grupo Solutions</strong> — a{' '}
+                  <strong className="text-white">RSTech</strong> e a{' '}
+                  <strong className="text-white">SCTech</strong> — a partir de anos
+                  de experiência real em TI, infraestrutura e segurança da
+                  informação.
+                </p>
+                <p className="text-slate-400 leading-relaxed mb-6">
+                  O que já funcionava no dia a dia desses clientes virou produto
+                  pela{' '}
+                  <strong className="text-slate-200">Nexium Solutions</strong>, a
+                  vertente de software do grupo. É engenharia de quem vive o
+                  problema — não teoria de catálogo.
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="https://gruposolutions.net/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 transition"
+                  >
+                    Conheça o Grupo Solutions →
+                  </a>
+                  <a
+                    href="https://nexiumsolutions.com.br/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg text-slate-300 hover:bg-white/5 transition"
+                  >
+                    Feito pela Nexium Solutions
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-28 grid place-items-center px-6">
+                  <img
+                    src="/logo-rstech.png"
+                    alt="RS Tech Solutions"
+                    className="max-h-12 max-w-[220px] w-auto object-contain opacity-90"
+                  />
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-28 grid place-items-center px-6">
+                  <img
+                    src="/logo-sctech.png"
+                    alt="SC Tech Solutions"
+                    className="max-h-16 max-w-[220px] w-auto object-contain opacity-90"
+                  />
+                </div>
+                <div className="text-center text-xs text-slate-500">
+                  Empresas do Grupo Solutions
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA final */}
         <section className="max-w-4xl mx-auto px-6 pb-24 text-center">
           <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-brand-600/20 to-cyan-500/10 p-12">
