@@ -245,9 +245,6 @@ export function LandingPage() {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 sm:p-12">
             <div className="grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 mb-5">
-                  🏗️ Nascido na operação, não num slide
-                </div>
                 <h2 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
                   Veio de quem já protege empresas de verdade.
                 </h2>
@@ -329,13 +326,29 @@ export function LandingPage() {
         <footer className="border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
             <Logo />
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-x-3 gap-y-1 text-center sm:text-left">
               <span>
                 NexGuard · uma solução{' '}
-                <span className="text-slate-300">Nexium Solutions</span> ·{' '}
-                {new Date().getFullYear()}
+                <a
+                  href="https://nexiumsolutions.com.br/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-300 hover:text-white"
+                >
+                  Nexium Solutions
+                </a>
+                , do{' '}
+                <a
+                  href="https://gruposolutions.net/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-300 hover:text-white"
+                >
+                  Grupo Solutions
+                </a>{' '}
+                (RSTech · SCTech) · {new Date().getFullYear()}
               </span>
-              <span className="text-slate-700">·</span>
+              <span className="hidden sm:inline text-slate-700">·</span>
               <a
                 href="/termos"
                 target="_blank"
